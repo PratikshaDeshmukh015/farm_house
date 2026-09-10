@@ -381,6 +381,7 @@ export default function DiscountsSection({ onOffersCount }) {
                       ? '/farmhouses'
                       : `/farmhouses?type=${card.typeKey}`
                   }
+                  state={{ appliedDiscount: card.rawDiscount }}
                   className="ds-type-book-btn"
                 >
                   Explore {card.meta.label} ({card.discountPercent}% OFF) →

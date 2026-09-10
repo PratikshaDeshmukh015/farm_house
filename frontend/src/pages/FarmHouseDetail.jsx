@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { farmhouseAPI, reviewAPI } from "../api/axiosInstance";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
+import { farmhouseAPI, reviewAPI, discountAPI } from "../api/axiosInstance";
 import "./FarmHouseDetail.css";
 
 const getLocationType = (location = "") => {
@@ -127,6 +127,7 @@ function FarmHouseDetail({ user }) {
   const [activeTimeOfDay, setActiveTimeOfDay] = useState("morning");
   const [checklist, setChecklist] = useState([]);
   const [checkIn, setCheckIn] = useState("");
+  const location = useLocation();
   const [checkOut, setCheckOut] = useState("");
   const [guestsCount, setGuestsCount] = useState(1);
   const [addons, setAddons] = useState({
@@ -135,6 +136,12 @@ function FarmHouseDetail({ user }) {
     dj: false,
     adventure: false,
   });
+
+  // Discount state
+  const [discounts, setDiscounts] = useState([]);
+  const [appliedDiscount, setAppliedDiscount] = useState(
+    location.state?.appliedDiscount || null
+  );
 
   // Review states
   const [reviews, setReviews] = useState([]);
@@ -145,7 +152,26 @@ function FarmHouseDetail({ user }) {
   useEffect(() => {
     fetchFarmhouseDetails();
     fetchReviews();
+    fetchDiscounts();
   }, [id]);
+
+  const fetchDiscounts = async () => {
+    try {
+      const res = await discountAPI.getActiveDiscounts();
+      if (res.data?.success && Array.isArray(res.data.discounts)) {
+        setDiscounts(res.data.discounts);
+        if (!location.state?.appliedDiscount) {
+          const match = res.data.discounts.find(
+            d => d && d.isActive !== false && Number(d.discountPercent) > 0 &&
+            (String(d.farmhouseId) === String(id) || d.farmhouseType === 'ALL')
+          );
+          if (match) setAppliedDiscount(match);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch active discounts:", err);
+    }
+  };
 
   useEffect(() => {
     if (!isGalleryStoryOpen) return undefined;
@@ -332,7 +358,8 @@ function FarmHouseDetail({ user }) {
           prefilledStartDate: checkIn,
           prefilledEndDate: checkOut,
           prefilledGuests: guestsCount,
-          prefilledAddons: addons
+          prefilledAddons: addons,
+          prefilledDiscount: appliedDiscount
         } 
       });
     }
@@ -359,15 +386,24 @@ function FarmHouseDetail({ user }) {
       (addons.dj ? 4000 : 0) +
       (addons.adventure ? 2500 : 0);
 
-    const subtotal = baseCost + chefCost + flatCost;
+    const rawSubtotal = baseCost + chefCost + flatCost;
+    const discountPercent = appliedDiscount ? Number(appliedDiscount.discountPercent || 0) : 0;
+    const discountAmount = (nights > 0 && discountPercent > 0)
+      ? Math.round((baseCost * discountPercent) / 100)
+      : 0;
+
+    const subtotal = Math.max(0, rawSubtotal - discountAmount);
     const gst = Math.round(subtotal * 0.18);
     const serviceFee = Math.round(subtotal * 0.05);
     const grandTotal = subtotal + gst + serviceFee;
 
-    return { nights, baseCost, chefCost, flatCost, subtotal, gst, serviceFee, grandTotal };
+    const originalTotal = rawSubtotal + Math.round(rawSubtotal * 0.18) + Math.round(rawSubtotal * 0.05);
+    const totalSavings = Math.max(0, originalTotal - grandTotal);
+
+    return { nights, baseCost, chefCost, flatCost, discountAmount, discountPercent, totalSavings, subtotal, gst, serviceFee, grandTotal };
   };
 
-  const { nights, baseCost, chefCost, flatCost, subtotal, gst, serviceFee, grandTotal } = calculateBookingDetails();
+  const { nights, baseCost, chefCost, flatCost, discountAmount, discountPercent, totalSavings, subtotal, gst, serviceFee, grandTotal } = calculateBookingDetails();
 
   return (
     <div className="fd-page">
@@ -818,6 +854,12 @@ function FarmHouseDetail({ user }) {
                     <span>₹{flatCost.toLocaleString()}</span>
                   </div>
                 )}
+                {appliedDiscount && discountAmount > 0 && (
+                  <div className="fd-bill-row" style={{ color: '#16a34a', fontWeight: 700 }}>
+                    <span>🏷️ Offer ({discountPercent}% OFF)</span>
+                    <span>-₹{discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="fd-bill-row">
                   <span>GST (18%)</span>
                   <span>₹{gst.toLocaleString()}</span>
@@ -837,13 +879,30 @@ function FarmHouseDetail({ user }) {
               <span className="fd-per-night">{nights > 0 ? "total" : "/ night"}</span>
             </div>
 
+            {appliedDiscount && totalSavings > 0 && nights > 0 && (
+              <div style={{
+                background: '#dcfce7',
+                color: '#15803d',
+                border: '1px solid #86efac',
+                borderRadius: '8px',
+                padding: '0.45rem 0.8rem',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                textAlign: 'center',
+                margin: '0.5rem 0 1rem'
+              }}>
+                🎉 {discountPercent}% OFF Applied — You save ₹{totalSavings.toLocaleString()}!
+              </div>
+            )}
+
             <Link
               to={bookingLink || "/login"}
               state={{
                 prefilledStartDate: checkIn,
                 prefilledEndDate: checkOut,
                 prefilledGuests: guestsCount,
-                prefilledAddons: addons
+                prefilledAddons: addons,
+                prefilledDiscount: appliedDiscount
               }}
               className="fd-book-btn"
               onClick={handleBookClick}
@@ -860,7 +919,8 @@ function FarmHouseDetail({ user }) {
                     prefilledStartDate: checkIn,
                     prefilledEndDate: checkOut,
                     prefilledGuests: guestsCount,
-                    prefilledAddons: addons
+                    prefilledAddons: addons,
+                    prefilledDiscount: appliedDiscount
                   }}
                 >
                   Log in
@@ -898,7 +958,8 @@ function FarmHouseDetail({ user }) {
             prefilledStartDate: checkIn,
             prefilledEndDate: checkOut,
             prefilledGuests: guestsCount,
-            prefilledAddons: addons
+            prefilledAddons: addons,
+            prefilledDiscount: appliedDiscount
           }}
           className="fd-sticky-btn"
           onClick={handleBookClick}

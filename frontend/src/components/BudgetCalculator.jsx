@@ -45,6 +45,8 @@ function BudgetCalculator() {
     }));
   };
 
+  const [discountPercent, setDiscountPercent] = useState(0);
+
   const selectedFh = farmhouses.find((f) => f.id.toString() === selectedFhId);
   const pricePerDay = selectedFh ? selectedFh.pricePerDay : 0;
   const maxGuests = selectedFh ? selectedFh.maxGuests : 10;
@@ -63,7 +65,9 @@ function BudgetCalculator() {
     (addons.guide ? addonPrices.guide : 0) +
     (addons.dj ? addonPrices.dj : 0);
 
-  const subtotal = baseCost + cateringCost + flatAddonsCost;
+  const rawSubtotal = baseCost + cateringCost + flatAddonsCost;
+  const discountAmount = discountPercent > 0 ? Math.round((baseCost * discountPercent) / 100) : 0;
+  const subtotal = Math.max(0, rawSubtotal - discountAmount);
   const taxes = Math.round(subtotal * 0.18); // 18% GST
   const serviceFee = Math.round(subtotal * 0.05); // 5% booking fee
   const grandTotal = subtotal + taxes + serviceFee;
@@ -208,6 +212,35 @@ function BudgetCalculator() {
               </label>
             </div>
           </div>
+
+          {/* Discount Offer Selector */}
+          <div className="form-group" style={{ marginTop: '1.25rem' }}>
+            <label style={{ fontWeight: 700, fontSize: '0.88rem', color: '#14532d', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <span>🏷️</span> Apply Discount Offer
+            </label>
+            <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.45rem' }}>
+              {[0, 10, 15, 20, 25].map(pct => (
+                <button
+                  key={pct}
+                  type="button"
+                  onClick={() => setDiscountPercent(pct)}
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '8px',
+                    border: discountPercent === pct ? '2px solid #16a34a' : '1px solid #cbd5e1',
+                    background: discountPercent === pct ? '#dcfce7' : '#ffffff',
+                    color: discountPercent === pct ? '#15803d' : '#475569',
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {pct === 0 ? 'No Discount' : `${pct}% OFF`}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Invoice Summary Column */}
@@ -232,6 +265,13 @@ function BudgetCalculator() {
               </div>
             )}
             
+            {discountPercent > 0 && discountAmount > 0 && (
+              <div className="invoice-row" style={{ color: '#16a34a', fontWeight: 700 }}>
+                <span>🏷️ Offer ({discountPercent}% OFF)</span>
+                <span>-₹{discountAmount.toLocaleString()}</span>
+              </div>
+            )}
+
             <hr />
 
             <div className="invoice-row">

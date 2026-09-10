@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { bookingAPI, farmhouseAPI, paymentAPI } from '../api/axiosInstance';
+import { bookingAPI, farmhouseAPI, paymentAPI, discountAPI } from '../api/axiosInstance';
 import './BookingPage.css';
+import InteractiveCalendar from '../components/InteractiveCalendar';
 
 // Demo fallback farmhouses
 const DEMO_FARMHOUSES = {
@@ -72,6 +73,16 @@ function BookingPage({ user }) {
   );
   const [paymentMethod, setPaymentMethod] = useState('CARD');
 
+  // Discount offers & coupons state
+  const [discountsList, setDiscountsList] = useState([]);
+  const [appliedDiscount, setAppliedDiscount] = useState(
+    prefilled.prefilledDiscount || prefilled.appliedDiscount || null
+  );
+  const [couponCode, setCouponCode] = useState(
+    prefilled.prefilledDiscount?.specialOffer || prefilled.appliedDiscount?.specialOffer || ''
+  );
+  const [couponMsg, setCouponMsg] = useState(null);
+
   const maxGuests = Math.max(1, Number(farmhouse?.maxGuests) || 10);
   const maxCouples = Math.max(1, Math.floor(maxGuests / 2));
   const guestPresets = [4, 8, 15, 25, 50, 100, 150, maxGuests]
@@ -82,6 +93,7 @@ function BookingPage({ user }) {
   useEffect(() => {
     fetchFarmhouseDetails();
     fetchFarmhouseBookings();
+    fetchDiscounts();
   }, [farmhouseId]);
 
   const fetchFarmhouseDetails = async () => {
@@ -107,6 +119,57 @@ function BookingPage({ user }) {
       setFarmhouseBookings([]);
     }
   };
+
+  const fetchDiscounts = async () => {
+    try {
+      const response = await discountAPI.getActiveDiscounts();
+      if (response.data && response.data.success && Array.isArray(response.data.discounts)) {
+        setDiscountsList(response.data.discounts);
+        // If not already selected, auto-select a discount that directly applies to this farmhouse or ALL
+        if (!prefilled.prefilledDiscount && !prefilled.appliedDiscount) {
+          const match = response.data.discounts.find(
+            d => d && d.isActive !== false && Number(d.discountPercent) > 0 &&
+            (String(d.farmhouseId) === String(farmhouseId) || d.farmhouseType === 'ALL')
+          );
+          if (match) {
+            setAppliedDiscount(match);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch discounts:', e);
+    }
+  };
+
+  // Available curated offers (live from backend or verified seasonal defaults)
+  const activeOffers = discountsList.filter(
+    d => d && d.isActive !== false && Number(d.discountPercent) > 0 &&
+         (!d.farmhouseId || String(d.farmhouseId) === String(farmhouseId))
+  );
+
+  const availableOffers = activeOffers.length > 0 ? activeOffers : [
+    {
+      id: 'demo-estate20',
+      title: 'Luxury Estate Special',
+      specialOffer: 'ESTATE20',
+      discountPercent: 20,
+      description: '20% off whole estate buyout and multi-day vacations',
+    },
+    {
+      id: 'demo-welcome10',
+      title: 'Welcome First Stay Offer',
+      specialOffer: 'WELCOME10',
+      discountPercent: 10,
+      description: '10% instant savings on your first farmhouse booking',
+    },
+    {
+      id: 'demo-pool15',
+      title: 'Pool & Weekend Celebration',
+      specialOffer: 'WEEKEND15',
+      discountPercent: 15,
+      description: '15% savings on weekend & pool party bookings',
+    }
+  ];
 
   const toDateKey = (date) => {
     const year = date.getFullYear();
@@ -145,7 +208,7 @@ function BookingPage({ user }) {
     setEndDate(selectedDate);
   };
 
-  // ── Calculations ──────────────────────────────
+  // ── Financial Calculations (Discounts, Add-ons, Taxes) ──
   const nights = (() => {
     if (!startDate || !endDate) return 0;
     const diff = Math.ceil((new Date(endDate) - new Date(startDate)) / 86400000);
@@ -160,10 +223,67 @@ function BookingPage({ user }) {
     (addons.adventure ? 2500 : 0) +
     (addons.decor     ? 2000 : 0) +
     (addons.spa       ? 3500 : 0);
-  const subtotal   = baseCost + chefCost + flatCost;
+
+  // Raw stay subtotal
+  const rawSubtotal = baseCost + chefCost + flatCost;
+
+  // Correct Discount calculation based on applied offer percentage
+  const discountPercent = appliedDiscount ? Number(appliedDiscount.discountPercent || 0) : 0;
+  const discountAmount = (nights > 0 && discountPercent > 0)
+    ? Math.round((baseCost * discountPercent) / 100)
+    : 0;
+
+  // Net taxable subtotal after applying discount
+  const subtotal   = Math.max(0, rawSubtotal - discountAmount);
   const gst        = Math.round(subtotal * 0.18);
   const serviceFee = Math.round(subtotal * 0.05);
   const grandTotal = subtotal + gst + serviceFee;
+
+  // Total savings compared to undiscounted rate
+  const originalTotal = rawSubtotal + Math.round(rawSubtotal * 0.18) + Math.round(rawSubtotal * 0.05);
+  const totalSavings  = Math.max(0, originalTotal - grandTotal);
+
+  // ── Discount & Coupon Actions ──────────────────
+  const handleApplyOffer = (offer) => {
+    setAppliedDiscount(offer);
+    const savingEst = nights > 0 ? Math.round((baseCost * Number(offer.discountPercent)) / 100) : 0;
+    setCouponMsg({
+      type: 'success',
+      text: `🎉 ${offer.discountPercent}% Discount applied (${offer.title || offer.specialOffer || 'Offer'})!${savingEst > 0 ? ` Save ₹${savingEst.toLocaleString()} on stay` : ''}`
+    });
+  };
+
+  const handleRemoveOffer = () => {
+    setAppliedDiscount(null);
+    setCouponCode('');
+    setCouponMsg({ type: 'info', text: 'Discount offer removed.' });
+  };
+
+  const handleApplyCoupon = (e) => {
+    e?.preventDefault();
+    if (!couponCode.trim()) {
+      setCouponMsg({ type: 'error', text: 'Please enter a coupon or promo code.' });
+      return;
+    }
+    const code = couponCode.trim().toUpperCase();
+    const match = availableOffers.find(
+      o => (o.specialOffer && o.specialOffer.toUpperCase() === code) ||
+           (o.title && o.title.toUpperCase().includes(code))
+    );
+    if (match) {
+      handleApplyOffer(match);
+    } else if (code === 'WELCOME10' || code === 'SAVE10') {
+      handleApplyOffer({ title: 'Welcome 10% OFF', specialOffer: code, discountPercent: 10 });
+    } else if (code === 'ESTATE20' || code === 'FARM20' || code === 'SAVE20') {
+      handleApplyOffer({ title: 'Special 20% OFF', specialOffer: code, discountPercent: 20 });
+    } else if (code === 'WEEKEND15' || code === 'SAVE15') {
+      handleApplyOffer({ title: 'Weekend 15% OFF', specialOffer: code, discountPercent: 15 });
+    } else if (code === 'SUPER30' || code === 'FARM30') {
+      handleApplyOffer({ title: 'Mega 30% OFF', specialOffer: code, discountPercent: 30 });
+    } else {
+      setCouponMsg({ type: 'error', text: `Invalid promo code "${couponCode}". Try ESTATE20, WELCOME10, or WEEKEND15.` });
+    }
+  };
 
   // ── Step Validation ───────────────────────────
   const step0Valid = startDate && endDate && nights > 0 && guests >= 1 && guests <= maxGuests;
@@ -217,8 +337,10 @@ function BookingPage({ user }) {
         endDate,
         timeSlot,
         numberOfGuests: parseInt(guests),
+        totalPrice: grandTotal, // Pass accurate discounted grand total!
         specialRequirements: [
           stayTypeDetail ? `Stay Type: ${stayTypeDetail}` : '',
+          appliedDiscount ? `Discount Offer: ${appliedDiscount.title || `${discountPercent}% OFF`} (Saved ₹${totalSavings.toLocaleString()})` : '',
           specialRequirements,
           addonsText ? `Add-ons: ${addonsText}` : ''
         ].filter(Boolean).join(' | '),
@@ -279,11 +401,17 @@ function BookingPage({ user }) {
           <div className="bk-success-details">
             <div className="bk-succ-row"><span>📅 Check-in</span><strong>{fmt(startDate)}<small>{getBookingHours(timeSlot).checkIn}</small></strong></div>
             <div className="bk-succ-row"><span>📅 Check-out</span><strong>{fmt(endDate)}<small>{getBookingHours(timeSlot).checkOut}</small></strong></div>
-            <div className="bk-succ-row"><span>🕒 Booking type</span><strong>{BOOKING_TYPES.find(type => type.key === normalizeBookingType(timeSlot))?.label}</strong></div>
+            <div className="bk-succ-row"><span>🕒 Booking type</span><strong>{BOOKING_TYPES.find(type => type.key === toUiBookingType(normalizeBookingType(timeSlot)))?.label || '—'}</strong></div>
             <div className="bk-succ-row"><span>🌙 Nights</span><strong>{nights}</strong></div>
             <div className="bk-succ-row"><span>👥 Guests</span><strong>{guests} {guestGroupType ? `(${guestGroupType})` : ''}</strong></div>
             <div className="bk-succ-divider"/>
             <div className="bk-succ-row bk-succ-total"><span>💰 Total Paid</span><strong>₹{grandTotal.toLocaleString()}</strong></div>
+            {appliedDiscount && totalSavings > 0 && (
+              <div className="bk-succ-row" style={{ color: '#15803d', fontWeight: 700 }}>
+                <span>🏷️ Offer Savings</span>
+                <strong>-₹{totalSavings.toLocaleString()} ({discountPercent}% OFF applied)</strong>
+              </div>
+            )}
           </div>
           <div className="bk-success-btns">
             <button className="bk-btn-primary" onClick={() => navigate('/my-bookings')}>View My Bookings</button>
@@ -350,7 +478,7 @@ function BookingPage({ user }) {
                   <button
                     type="button"
                     key={type.key}
-                    className={`bk-booking-type ${normalizeBookingType(timeSlot) === type.key ? 'selected' : ''}`}
+                    className={`bk-booking-type ${toUiBookingType(normalizeBookingType(timeSlot)) === type.key ? 'selected' : ''}`}
                     onClick={() => setTimeSlot(type.key)}
                   >
                     <strong>{type.label}</strong>
@@ -386,69 +514,31 @@ function BookingPage({ user }) {
                 </div>
               </div>
 
-              <div className="bk-availability-calendar">
-                <div className="bk-calendar-toolbar">
-                  <button
-                    type="button"
-                    className="bk-calendar-nav"
-                    onClick={() => setCalendarMonth(month => new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-                    aria-label="Previous month"
-                  >←</button>
-                  <strong>{calendarMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</strong>
-                  <button
-                    type="button"
-                    className="bk-calendar-nav"
-                    onClick={() => setCalendarMonth(month => new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-                    aria-label="Next month"
-                  >→</button>
-                </div>
-                <div className="bk-calendar-legend">
-                  <span><i className="bk-legend-dot available" /> Available</span>
-                  <span><i className="bk-legend-dot booked" /> Booked</span>
-                  <span className="bk-calendar-hint">Select a day to set check-in, then check-out</span>
-                </div>
-                <div className="bk-calendar-weekdays">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <span key={day}>{day}</span>)}
-                </div>
-                <div className="bk-calendar-grid">
-                  {calendarDays.map((date, index) => {
-                    if (!date) return <span className="bk-calendar-empty" key={`empty-${index}`} />;
-                    const dateKey = toDateKey(date);
-                    const past = dateKey < today;
-                    const selected = dateKey === startDate || dateKey === endDate;
-                    const dayBooked = isDateBooked(date, 'FULL_DAY');
-                    return (
-                      <div className={`bk-calendar-day ${dayBooked ? 'booked' : 'available'} ${past ? 'past' : ''} ${selected ? 'selected' : ''}`} key={dateKey}>
-                        <strong>{date.getDate()}</strong>
-                        <div className="bk-calendar-slots">
-                          {[{ label: 'AM', name: 'Day' }, { label: 'PM', name: 'Night' }].map(slot => {
-                            const booked = isDateBooked(date, slot.label);
-                            return (
-                              <button
-                              type="button"
-                              key={slot.label}
-                              className={`bk-calendar-slot ${booked ? 'booked' : 'available'} ${selected && timeSlot === slot.label ? 'selected' : ''}`}
-                              disabled={booked || past}
-                              onClick={() => selectCalendarDate(date, slot.label)}
-                              title={`${slot.label} (${slot.name}) - ${booked ? 'Booked' : 'Available'}`}
-                              >
-                                <span>{slot.label === 'AM' ? '☀' : '☾'}</span>{slot.label} {slot.name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="bk-field bk-special-request-field">
+                <label>Special Requests <span className="bk-label-sub">(Optional)</span></label>
+                <textarea
+                  value={specialRequirements}
+                  onChange={e => setSpecialRequirements(e.target.value)}
+                  placeholder="Early check-in, dietary preferences, baby cot, anniversary decoration…"
+                  rows={3}
+                />
               </div>
+
+              <InteractiveCalendar
+                startDate={startDate}
+                endDate={endDate}
+                timeSlot={timeSlot}
+                setStartDate={setStartDate}
+                setEndDate={setEndDate}
+                setTimeSlot={setTimeSlot}
+                today={today}
+              />
 
               {nights > 0 && (
                 <div className="bk-nights-chip">
                   🌙 <strong>{nights} night{nights > 1 ? 's' : ''}</strong> — {fmt(startDate)} to {fmt(endDate)}
                 </div>
               )}
-
               {/* Formal Farmhouse Stay Type & Guest Allocation Section */}
               <div className="bk-field bk-guest-field bk-formal-estate-card">
                 <div className="bk-formal-section-header">
@@ -834,17 +924,6 @@ function BookingPage({ user }) {
                 )}
               </div>
 
-              {/* Special Requirements */}
-              <div className="bk-field">
-                <label>Special Requests <span className="bk-label-sub">(Optional)</span></label>
-                <textarea
-                  value={specialRequirements}
-                  onChange={e => setSpecialRequirements(e.target.value)}
-                  placeholder="Early check-in, dietary preferences, baby cot, anniversary decoration…"
-                  rows={3}
-                />
-              </div>
-
               <button className="bk-btn-next" onClick={handleNext} disabled={!step0Valid}>
                 Continue to Add-ons →
               </button>
@@ -881,6 +960,80 @@ function BookingPage({ user }) {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* DISCOUNT OFFERS & PROMO SECTION */}
+              <div className="bk-discount-offers-card">
+                <div className="bk-doc-header">
+                  <div className="bk-doc-title-group">
+                    <span className="bk-doc-badge">🏷️ SPECIAL OFFERS & COUPONS</span>
+                    <h3 className="bk-doc-title">Apply Discount Offer</h3>
+                    <p className="bk-doc-sub">Choose a verified offer or enter your promo code to calculate your instant discount</p>
+                  </div>
+                  {appliedDiscount && (
+                    <button type="button" className="bk-remove-discount-btn" onClick={handleRemoveOffer}>
+                      ✕ Remove Offer ({discountPercent}% OFF)
+                    </button>
+                  )}
+                </div>
+
+                {couponMsg && (
+                  <div className={`bk-coupon-alert ${couponMsg.type}`}>
+                    <span>{couponMsg.text}</span>
+                    {appliedDiscount && totalSavings > 0 && (
+                      <strong>You save ₹{totalSavings.toLocaleString()}!</strong>
+                    )}
+                  </div>
+                )}
+
+                {/* Promo Code Input Form */}
+                <form className="bk-coupon-input-form" onSubmit={handleApplyCoupon}>
+                  <div className="bk-coupon-input-wrap">
+                    <span className="bk-coupon-icon">🎟️</span>
+                    <input
+                      type="text"
+                      placeholder="Enter promo code (e.g. ESTATE20, WELCOME10, WEEKEND15)"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      className="bk-coupon-input"
+                    />
+                  </div>
+                  <button type="submit" className="bk-coupon-apply-btn">
+                    Apply Code
+                  </button>
+                </form>
+
+                {/* Available Offers Grid */}
+                <div className="bk-available-offers-grid">
+                  {availableOffers.map(offer => {
+                    const isSelected = appliedDiscount && (
+                      appliedDiscount.id === offer.id ||
+                      (appliedDiscount.specialOffer && offer.specialOffer && appliedDiscount.specialOffer === offer.specialOffer) ||
+                      (appliedDiscount.title === offer.title)
+                    );
+                    return (
+                      <div
+                        key={offer.id || offer.specialOffer || offer.title}
+                        className={`bk-offer-chip-card ${isSelected ? 'selected' : ''}`}
+                        onClick={() => isSelected ? handleRemoveOffer() : handleApplyOffer(offer)}
+                      >
+                        <div className="bk-occ-top">
+                          <span className="bk-occ-percent">{offer.discountPercent}% OFF</span>
+                          {offer.specialOffer && <span className="bk-occ-code">{offer.specialOffer}</span>}
+                        </div>
+                        <h4 className="bk-occ-title">{offer.title}</h4>
+                        {offer.description && <p className="bk-occ-desc">{offer.description}</p>}
+                        <div className="bk-occ-footer">
+                          {isSelected ? (
+                            <span className="bk-occ-status applied">✓ Applied ({offer.discountPercent}% OFF)</span>
+                          ) : (
+                            <span className="bk-occ-status apply">Apply Offer →</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="bk-btn-row">
@@ -971,7 +1124,7 @@ function BookingPage({ user }) {
               </div>
               <div className="bk-rcpt-row">
                 <span>🕒 Time slot</span>
-                <strong>{BOOKING_TYPES.find(type => type.key === normalizeBookingType(timeSlot))?.label}</strong>
+                <strong>{BOOKING_TYPES.find(type => type.key === toUiBookingType(normalizeBookingType(timeSlot)))?.label || '—'}</strong>
               </div>
               <div className="bk-rcpt-row">
                 <span>🌙 Nights</span>
@@ -984,6 +1137,75 @@ function BookingPage({ user }) {
             </div>
 
             <div className="bk-receipt-divider" />
+
+            <div className="bk-receipt-manifest">
+              <div className="bk-receipt-manifest-header">
+                <span>OFFICIAL RESERVATION MANIFEST</span>
+                <strong>EST-{guestGroupType === 'Couple' ? `CPL-${couplesCount}X${guests}` : `${guestGroupType.toUpperCase()}-${guests}`}</strong>
+              </div>
+              <div className="bk-receipt-manifest-row">
+                <span>Stay profile</span>
+                <strong>{guestGroupType === 'Couple' ? 'Couples Luxury Sanctuary' : `${guestGroupType} Estate Stay`}</strong>
+              </div>
+              <div className="bk-receipt-manifest-row">
+                <span>Accommodation</span>
+                <strong>{guestGroupType === 'Couple' ? `${couplesCount} King En-Suite${couplesCount > 1 ? 's' : ''}` : 'Private estate allocation'}</strong>
+              </div>
+              <div className="bk-receipt-manifest-row">
+                <span>Registered guests</span>
+                <strong>{guests} {guestGroupType === 'Couple' ? 'Adults' : 'Guests'}</strong>
+              </div>
+              <div className="bk-receipt-manifest-note">🛡️ Private premises, sanitized linens, and dedicated caretaker.</div>
+            </div>
+
+            {specialRequirements.trim() && (
+              <div className="bk-receipt-request">
+                <span>Special requests</span>
+                <p>{specialRequirements}</p>
+              </div>
+            )}
+
+            <div className="bk-receipt-divider" />
+
+            {/* Sidebar Promo Code Apply Box */}
+            <div className="bk-sidebar-coupon-box">
+              {appliedDiscount ? (
+                <div className="bk-sc-applied">
+                  <span>🏷️ {appliedDiscount.discountPercent}% OFF Applied</span>
+                  <button type="button" className="bk-sc-remove" onClick={handleRemoveOffer}>Remove</button>
+                </div>
+              ) : (
+                <div>
+                  <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 700 }}>🏷️ Promo Code / Offer</span>
+                  <form className="bk-sc-form" onSubmit={handleApplyCoupon}>
+                    <input
+                      type="text"
+                      className="bk-sc-input"
+                      placeholder="e.g. ESTATE20"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                    />
+                    <button type="submit" className="bk-sc-btn">Apply</button>
+                  </form>
+                  {availableOffers.length > 0 && (
+                    <div className="bk-sc-quick-chips">
+                      <span className="bk-sc-qc-label">Codes:</span>
+                      {availableOffers.map(o => (
+                        <button
+                          key={o.id || o.specialOffer || o.title}
+                          type="button"
+                          className="bk-sc-chip"
+                          onClick={() => handleApplyOffer(o)}
+                          title={`Apply ${o.discountPercent}% OFF (${o.title})`}
+                        >
+                          {o.specialOffer || `${o.discountPercent}% OFF`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Price Breakdown */}
             <div className="bk-receipt-section">
@@ -1012,6 +1234,21 @@ function BookingPage({ user }) {
                   </div>
                 ) : null;
               })}
+
+              {/* Discount Offer Row */}
+              {appliedDiscount && discountAmount > 0 && (
+                <div className="bk-rcpt-row bk-rcpt-discount-row">
+                  <span>🏷️ Discount ({discountPercent}% OFF)</span>
+                  <strong>-₹{discountAmount.toLocaleString()}</strong>
+                </div>
+              )}
+              {appliedDiscount && discountAmount > 0 && (
+                <div className="bk-rcpt-row" style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                  <span>Taxable Subtotal</span>
+                  <span>₹{subtotal.toLocaleString()}</span>
+                </div>
+              )}
+
               <div className="bk-rcpt-row">
                 <span>GST (18%)</span>
                 <strong>₹{gst.toLocaleString()}</strong>
@@ -1029,6 +1266,17 @@ function BookingPage({ user }) {
               <span>Total Amount</span>
               <strong>₹{grandTotal.toLocaleString()}</strong>
             </div>
+
+            {/* Savings Callout */}
+            {appliedDiscount && totalSavings > 0 && (
+              <div className="bk-savings-callout">
+                <span>🎉</span>
+                <div>
+                  <strong>₹{totalSavings.toLocaleString()} Total Savings!</strong>
+                  <small>{discountPercent}% OFF with {appliedDiscount.title || appliedDiscount.specialOffer || 'Offer'}</small>
+                </div>
+              </div>
+            )}
 
             {/* Per person */}
             {grandTotal > 0 && nights > 0 && (
