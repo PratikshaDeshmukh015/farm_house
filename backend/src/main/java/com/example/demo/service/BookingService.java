@@ -87,9 +87,11 @@ public class BookingService {
             throw new RuntimeException("Farm house is already booked for these dates and time slot");
         }
         
-        // Calculate total price
+        // Calculate total price (use client calculated total including discounts/add-ons/taxes if provided, else fallback)
         long numberOfDays = Math.max(1, ChronoUnit.DAYS.between(dto.getStartDate(), dto.getEndDate()));
-        double totalPrice = numberOfDays * farmHouse.getPricePerDay();
+        double totalPrice = (dto.getTotalPrice() != null && dto.getTotalPrice() > 0)
+                ? dto.getTotalPrice()
+                : (numberOfDays * farmHouse.getPricePerDay());
         
         // Create booking
         Booking booking = new Booking();

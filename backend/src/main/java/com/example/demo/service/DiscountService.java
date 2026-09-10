@@ -38,6 +38,7 @@ public class DiscountService {
     public List<DiscountDTO> getAllActiveDiscounts() {
         return discountRepository.findActiveDiscounts(LocalDate.now())
                 .stream()
+                .filter(d -> d.getDiscountPercent() != null && d.getDiscountPercent() > 0)
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -77,7 +78,7 @@ public class DiscountService {
             throw new AccessDeniedException("Owners can only view their own discounts");
         }
         User owner = getAndValidateUser(ownerId);
-        return discountRepository.findByCreatedBy(owner)
+        return discountRepository.findByCreatedByOrFarmhouse_Owner(owner, owner)
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -139,9 +140,7 @@ public class DiscountService {
         }
         Discount discount = optional.get();
 
-        // Owner can only update their own discounts
-        if (requester.getRole() == User.Role.OWNER
-                && !discount.getCreatedBy().getId().equals(userId)) {
+        if (requester.getRole() == User.Role.OWNER && !canOwnerManageDiscount(discount, requester)) {
             throw new AccessDeniedException("You can only update your own discounts");
         }
 
@@ -191,8 +190,7 @@ public class DiscountService {
         }
         Discount discount = optional.get();
 
-        if (requester.getRole() == User.Role.OWNER
-                && !discount.getCreatedBy().getId().equals(userId)) {
+        if (requester.getRole() == User.Role.OWNER && !canOwnerManageDiscount(discount, requester)) {
             throw new AccessDeniedException("You can only delete your own discounts");
         }
 
@@ -212,6 +210,12 @@ public class DiscountService {
         return user.getRole() == User.Role.OWNER
                 || user.getRole() == User.Role.ADMIN
                 || user.getRole() == User.Role.SUPERADMIN;
+    }
+
+    private boolean canOwnerManageDiscount(Discount discount, User owner) {
+        return discount.getCreatedBy().getId().equals(owner.getId())
+                || (discount.getFarmhouse() != null
+                && discount.getFarmhouse().getOwner().getId().equals(owner.getId()));
     }
 
     private void validateDiscount(DiscountDTO dto) {
