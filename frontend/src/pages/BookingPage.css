@@ -187,6 +187,31 @@
   align-items: start;
 }
 
+/* Step 0 full-width override — no sidebar, full 1200px */
+.bk-layout.bk-layout--full {
+  grid-template-columns: 1fr;
+  max-width: 1400px;
+}
+
+/* Step 0 inner two-column grid: calendar left, accommodation right */
+.bk-step0-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.bk-step0-left,
+.bk-step0-right {
+  height: 100%;
+}
+
+/* Full-width "Continue" button inside the left panel */
+.bk-btn-next--full {
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
 /* ── ERROR BANNER ─────────────────────────────── */
 .bk-error-banner {
   display: flex;
@@ -1083,6 +1108,30 @@
   font-family: monospace;
 }
 
+.bk-fmb-action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bk-fmb-apply-btn {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #1b4332;
+  border: none;
+  border-radius: 6px;
+  padding: 0.22rem 0.55rem;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: background 0.18s;
+  white-space: nowrap;
+}
+
+.bk-fmb-apply-btn:hover {
+  background: #2d6a4f;
+}
+
 .bk-fmb-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1591,6 +1640,9 @@
     grid-template-columns: 1fr;
     padding: 0 1.25rem;
   }
+  .bk-step0-grid {
+    grid-template-columns: 1fr;
+  }
   .bk-receipt-col {
     order: -1;
     position: static;
@@ -1870,6 +1922,46 @@
 .bk-occ-status.applied {
   background: #16a34a;
   color: #ffffff;
+}
+
+/* Merged offer card — when manifest + backend offer are combined into one */
+.bk-offer-chip-card.bk-offer-merged {
+  border-color: #fbbf24;
+  background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+}
+
+.bk-offer-chip-card.bk-offer-merged:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 6px 18px rgba(251, 191, 36, 0.18);
+}
+
+.bk-offer-chip-card.bk-offer-merged.selected {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 2px #16a34a;
+}
+
+/* Wrapper so multiple code badges sit in a row */
+.bk-occ-codes {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Alternate (backend) code badge — slightly different tint to distinguish */
+.bk-occ-code-alt {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+/* Secondary description shown when backend desc differs from manifest desc */
+.bk-occ-desc-alt {
+  color: #78716c;
+  font-size: 0.75rem;
+  font-style: italic;
+  margin-top: -0.4rem;
 }
 
 /* ── RECEIPT DISCOUNT ROW & SAVINGS ── */
