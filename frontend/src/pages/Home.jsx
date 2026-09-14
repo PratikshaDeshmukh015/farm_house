@@ -1,563 +1,413 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { farmhouseAPI, reviewAPI } from '../api/axiosInstance';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { farmhouseAPI } from '../api/axiosInstance';
 import ExperienceChatbot from '../components/ExperienceChatbot';
-import BudgetCalculator from '../components/BudgetCalculator';
-import DiscountsSection from '../components/DiscountsSection';
+import './Home.css';
 
-const ROTATING_WORDS = ['Sanctuary', 'Pool Paradise', 'Rustic Cabin', 'Mountain Villa', 'Heritage Palace'];
-
-
-const VIBE_CARDS = [
+const DEFAULT_FARMHOUSES = [
   {
-    emoji: '🧘',
-    title: 'Zen Retreat',
-    desc: 'Quiet riverside stays with yoga lawns & organic meals',
-    gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-    filter: 'quiet',
-    img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop',
+    id: 1,
+    name: 'Sunset Valley Farmhouse',
+    location: 'Lonavala, Maharashtra',
+    pricePerDay: 5000,
+    rating: 4.8,
+    reviewsCount: 24,
+    imageUrl: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=600&auto=format&fit=crop&q=80',
+    isBestSeller: true,
   },
   {
-    emoji: '🎉',
-    title: 'Pool Party',
-    desc: 'Private infinity pools, DJ setups & party lawns',
-    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    filter: 'pool',
-    img: 'https://images.unsplash.com/photo-1572331165267-854da2b021b1?w=600&auto=format&fit=crop',
+    id: 2,
+    name: 'Green Hills Farmhouse',
+    location: 'Alibaug, Maharashtra',
+    pricePerDay: 6500,
+    rating: 4.7,
+    reviewsCount: 18,
+    imageUrl: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=600&auto=format&fit=crop&q=80',
+    isBestSeller: false,
   },
   {
-    emoji: '⛰️',
-    title: 'Adventure Woods',
-    desc: 'Mountain cabins with trekking trails & bonfires',
-    gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-    filter: 'adventure',
-    img: 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?w=600&auto=format&fit=crop',
+    id: 3,
+    name: "Nature's Nest",
+    location: 'Karjat, Maharashtra',
+    pricePerDay: 7000,
+    rating: 4.9,
+    reviewsCount: 32,
+    imageUrl: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=600&auto=format&fit=crop&q=80',
+    isBestSeller: false,
   },
   {
-    emoji: '🏰',
-    title: 'Heritage Palace',
-    desc: 'Royal Rajasthani havelis with cultural experiences',
-    gradient: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
-    filter: 'heritage',
-    img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&auto=format&fit=crop',
+    id: 4,
+    name: 'The Rustic Farm',
+    location: 'Mahabaleshwar, Maharashtra',
+    pricePerDay: 5500,
+    rating: 4.6,
+    reviewsCount: 15,
+    imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&auto=format&fit=crop&q=80',
+    isBestSeller: false,
   },
 ];
 
-const TESTIMONIALS = [
+const TESTIMONIALS_DATA = [
   {
-    id: 1, name: 'Rohan Sharma', role: 'Family Vacationer', rating: 5, avatar: '👨‍👩‍👧',
-    comment: 'The Mountain Villa was an absolute dream. We had the entire estate to ourselves — private pool, bonfire under the stars, and the most incredible sunrise views.',
+    id: 1,
+    name: 'Priya Sharma',
+    comment: 'Amazing experience! The farmhouse was clean, well-maintained and the view was just breathtaking. Highly recommended!',
+    rating: 5,
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
   },
   {
-    id: 2, name: 'Priya Patel', role: 'Birthday Event Host', rating: 5, avatar: '🎂',
-    comment: 'Hosted my 30th birthday at the Modern Farm Estate. The DJ setup, catering service, and massive lawns made it the best party of my life!',
+    id: 2,
+    name: 'Rohan Mehta',
+    comment: 'The private pool and bonfire night made our family weekend unforgettable. Excellent caretaker service and food!',
+    rating: 5,
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
   },
   {
-    id: 3, name: 'Vikram & Ananya', role: 'Honeymoon Couple', rating: 5, avatar: '💑',
-    comment: 'Our honeymoon at the Heritage Palace in Rajasthan was magical. The royal architecture, candlelight dinners, and personal butler made it unforgettable.',
+    id: 3,
+    name: 'Ananya Verma',
+    comment: 'Serene environment and completely pet-friendly. Booking through the platform was super smooth and seamless.',
+    rating: 5,
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
   },
-  {
-    id: 4, name: 'Deepak Khanna', role: 'Corporate Retreat Lead', rating: 4, avatar: '💼',
-    comment: 'Booked for our team offsite of 15 people. Excellent Wi-Fi, conference space, and the riverside location kept everyone energized and inspired.',
-  },
-];
-
-const FAQS = [
-  { q: 'How do I confirm my farmhouse booking?', a: 'Select your dates and click Book Now. A 50% deposit confirms your reservation instantly. You\'ll receive caretaker contact details and a digital receipt via email.' },
-  { q: 'Are pets allowed at the farmhouses?', a: 'Yes! Most estates feature massive open lawns and are completely pet-friendly. Just mention your furry companion during booking so we can arrange special amenities.' },
-  { q: 'Can we host large parties or DJ events?', a: 'Absolutely. Our premium estates like the Modern Farm Estate come with pre-installed sound systems. You can also add our DJ & Sound package from the Budget Planner below.' },
-  { q: 'What is the cancellation & refund policy?', a: 'Full refund for cancellations made 48+ hours before check-in. Within 48 hours, a 1-night charge applies. We also offer free date rescheduling within 30 days.' },
-  { q: 'Do you provide catering and private chef services?', a: 'Yes! Our Private Chef & Catering add-on includes breakfast, lunch, dinner, and evening snacks prepared with fresh local ingredients. Customizable menus available.' },
 ];
 
 function Home({ user }) {
+  const navigate = useNavigate();
   const [farmhouses, setFarmhouses] = useState([]);
-  const [filteredFarmhouses, setFilteredFarmhouses] = useState([]);
-  const [activeVibe, setActiveVibe] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [wordIndex, setWordIndex] = useState(0);
-  const [wordFade, setWordFade] = useState(true);
+  const [favorites, setFavorites] = useState({});
 
-  // Search
+  // Search state
   const [searchLoc, setSearchLoc] = useState('');
-  const [searchGuests, setSearchGuests] = useState('');
-  const [searchPrice, setSearchPrice] = useState('');
-  const [offersCount, setOffersCount] = useState(0);
+  const [checkInDate, setCheckInDate] = useState('');
+  const [checkOutDate, setCheckOutDate] = useState('');
+  const [guestsCount, setGuestsCount] = useState('2');
 
-  // Stats
-  const [stats, setStats] = useState({ houses: 0, guests: 0, rating: 0, cities: 0 });
+  // Testimonials index
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
 
-  // FAQ
-  const [activeFaq, setActiveFaq] = useState(null);
-
-  // Testimonials
-  const [testimonials, setTestimonials] = useState(TESTIMONIALS);
-  const [activeReviewIdx, setActiveReviewIdx] = useState(0);
-  const [newReview, setNewReview] = useState({ farmHouseId: '', comment: '', rating: 5 });
-  const [reviewMsg, setReviewMsg] = useState('');
-  const [reviewLoading, setReviewLoading] = useState(false);
-
-  const featuredRef = useRef(null);
-
-  // Word rotator
   useEffect(() => {
-    const interval = setInterval(() => {
-      setWordFade(false);
-      setTimeout(() => {
-        setWordIndex((prev) => (prev + 1) % ROTATING_WORDS.length);
-        setWordFade(true);
-      }, 400);
-    }, 2800);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Fetch farmhouses
-  useEffect(() => {
-    const load = async () => {
+    const fetchFarmhouses = async () => {
       try {
-        const res = await farmhouseAPI.getAllFarmHouses(0, 50);
-        if (res.data.success && res.data.farmhouses) {
-          setFarmhouses(res.data.farmhouses);
-          setFilteredFarmhouses(res.data.farmhouses);
+        const res = await farmhouseAPI.getAllFarmHouses(0, 8);
+        if (res.data?.success && res.data.farmhouses?.length > 0) {
+          // Augment with ratings/seller badge for preview
+          const formatted = res.data.farmhouses.map((fh, idx) => ({
+            ...fh,
+            rating: fh.rating || (4.6 + (idx % 4) * 0.1).toFixed(1),
+            reviewsCount: fh.reviewsCount || 15 + idx * 6,
+            isBestSeller: idx === 0,
+            imageUrl: fh.imageUrl || DEFAULT_FARMHOUSES[idx % DEFAULT_FARMHOUSES.length].imageUrl,
+          }));
+          setFarmhouses(formatted);
+        } else {
+          setFarmhouses(DEFAULT_FARMHOUSES);
         }
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error fetching farmhouses:', err);
+        setFarmhouses(DEFAULT_FARMHOUSES);
       } finally {
         setLoading(false);
       }
     };
-    load();
+    fetchFarmhouses();
   }, []);
 
-  // Stats count-up
-  useEffect(() => {
-    const targets = { houses: 50, guests: 12500, rating: 4.9, cities: 18 };
-    const duration = 1200;
-    const steps = 30;
-    const stepTime = duration / steps;
-    let step = 0;
-
-    const interval = setInterval(() => {
-      step++;
-      const progress = step / steps;
-      const ease = 1 - Math.pow(1 - progress, 3); // easeOutCubic
-      setStats({
-        houses: Math.round(targets.houses * ease),
-        guests: Math.round(targets.guests * ease),
-        rating: parseFloat((targets.rating * ease).toFixed(1)),
-        cities: Math.round(targets.cities * ease),
-      });
-      if (step >= steps) clearInterval(interval);
-    }, stepTime);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Vibe filter
-  const handleVibeClick = (vibe) => {
-    if (activeVibe === vibe.filter) {
-      setActiveVibe(null);
-      setFilteredFarmhouses(farmhouses);
-      return;
-    }
-    setActiveVibe(vibe.filter);
-    const filtered = farmhouses.filter((fh) => {
-      const text = `${fh.name} ${fh.description} ${fh.amenities} ${fh.location}`.toLowerCase();
-      if (vibe.filter === 'pool') return text.includes('pool') || text.includes('swim');
-      if (vibe.filter === 'quiet') return text.includes('river') || text.includes('peace') || text.includes('garden') || fh.location?.toLowerCase().includes('uttarakhand');
-      if (vibe.filter === 'adventure') return text.includes('mountain') || text.includes('trek') || text.includes('hiking') || fh.location?.toLowerCase().includes('himachal');
-      if (vibe.filter === 'heritage') return text.includes('heritage') || text.includes('traditional') || text.includes('culture') || fh.location?.toLowerCase().includes('rajasthan');
-      return true;
-    });
-    setFilteredFarmhouses(filtered.length > 0 ? filtered : farmhouses);
-    if (featuredRef.current) featuredRef.current.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // Quick search
-  const handleQuickSearch = (e) => {
+  const handleSearchSubmit = (e) => {
     e.preventDefault();
-    let results = [...farmhouses];
-    if (searchLoc) results = results.filter((fh) => fh.location?.toLowerCase().includes(searchLoc.toLowerCase()));
-    if (searchPrice) results = results.filter((fh) => fh.pricePerDay <= parseFloat(searchPrice));
-    if (searchGuests) results = results.filter((fh) => fh.maxGuests >= parseInt(searchGuests));
-    setFilteredFarmhouses(results);
-    setActiveVibe(null);
-    if (featuredRef.current) featuredRef.current.scrollIntoView({ behavior: 'smooth' });
+    const queryParams = new URLSearchParams();
+    if (searchLoc) queryParams.append('location', searchLoc);
+    if (guestsCount) queryParams.append('guests', guestsCount);
+    navigate(`/farmhouses?${queryParams.toString()}`);
   };
 
-  const clearSearch = () => {
-    setSearchLoc(''); setSearchGuests(''); setSearchPrice('');
-    setFilteredFarmhouses(farmhouses); setActiveVibe(null);
-  };
-
-  // Reviews
-  const handleAddReview = async (e) => {
+  const toggleFavorite = (id, e) => {
     e.preventDefault();
-    if (!user) {
-      setReviewMsg('Please log in to submit a review.');
-      return;
-    }
-
-    setReviewLoading(true);
-    try {
-      const response = await reviewAPI.createReview({
-        farmHouseId: Number(newReview.farmHouseId),
-        rating: newReview.rating,
-        comment: newReview.comment,
-      }, user.id);
-
-      if (response.data.success) {
-        const savedReview = response.data.review;
-        const added = {
-          id: savedReview.id,
-          name: savedReview.userName,
-          role: savedReview.userRole,
-          comment: savedReview.comment,
-          rating: savedReview.rating,
-          avatar: '⭐',
-        };
-        const updated = [...testimonials, added];
-        setTestimonials(updated);
-        setActiveReviewIdx(updated.length - 1);
-        setNewReview({ farmHouseId: '', comment: '', rating: 5 });
-        setReviewMsg('Your review has been published!');
-      } else {
-        setReviewMsg(response.data.message || 'Failed to add review.');
-      }
-    } catch (err) {
-      setReviewMsg(err.response?.data?.message || 'Failed to add review.');
-    } finally {
-      setReviewLoading(false);
-      setTimeout(() => setReviewMsg(''), 4000);
-    }
+    e.stopPropagation();
+    setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Fallback data for when backend is offline
-  const fallbackFarmhouses = [
-    { id: 1, name: 'Luxury Mountain Villa', location: 'Himachal Pradesh', description: 'Stunning mountain retreat with panoramic views, perfect for family vacations and peaceful getaways', pricePerDay: 5000, maxGuests: 6, bedrooms: 3, bathrooms: 4, imageUrl: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=500&auto=format&fit=crop' },
-    { id: 2, name: 'Cozy Countryside Cottage', location: 'Goa', description: 'Charming cottage nestled in the lush countryside, ideal for peaceful romantic getaways', pricePerDay: 3500, maxGuests: 4, bedrooms: 2, bathrooms: 3, imageUrl: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=500&auto=format&fit=crop' },
-    { id: 3, name: 'Modern Farm Estate', location: 'Punjab', description: 'Contemporary farmhouse with modern amenities, private pool, and party lawns for large groups', pricePerDay: 6000, maxGuests: 10, bedrooms: 5, bathrooms: 6, imageUrl: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=500&auto=format&fit=crop' },
-    { id: 4, name: 'Riverside Farmhouse', location: 'Uttarakhand', description: 'Beautiful farmhouse by the riverside with adventure activities and stunning river valley views', pricePerDay: 4500, maxGuests: 8, bedrooms: 4, bathrooms: 5, imageUrl: 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?w=500&auto=format&fit=crop' },
-    { id: 5, name: 'Heritage Farm Resort', location: 'Rajasthan', description: 'Traditional farmhouse preserving royal Rajasthani architecture and cultural heritage experiences', pricePerDay: 4000, maxGuests: 6, bedrooms: 3, bathrooms: 4, imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500&auto=format&fit=crop' },
-  ];
+  const handleNextTestimonial = () => {
+    setCurrentTestimonial((prev) => (prev + 1) % TESTIMONIALS_DATA.length);
+  };
 
-  const displayList = (filteredFarmhouses.length > 0 ? filteredFarmhouses : (loading ? [] : fallbackFarmhouses)).slice(0, 4);
+  const handlePrevTestimonial = () => {
+    setCurrentTestimonial((prev) => (prev - 1 + TESTIMONIALS_DATA.length) % TESTIMONIALS_DATA.length);
+  };
+
+  const displayedList = farmhouses.slice(0, 4);
 
   return (
-    <div className="home-page">
-      {/* ═══════════ HERO ═══════════ */}
-      <section className="lux-hero">
-        {/* Animated blobs */}
-        <div className="hero-blob blob-1"></div>
-        <div className="hero-blob blob-2"></div>
-        <div className="hero-blob blob-3"></div>
-
-        <div className="lux-hero-content">
-          <span className="hero-chip">🌿 CURATED LUXURY FARM STAYS</span>
-
-          <h1>
-            Escape to Your Private<br />
-            <span className={`rotating-word ${wordFade ? 'visible' : 'hidden'}`}>
-              {ROTATING_WORDS[wordIndex]}
-            </span>
+    <div className="home-container">
+      {/* 1. HERO SECTION */}
+      <section className="hero-wrapper">
+        <div className="hero-inner">
+          <span className="hero-tag">← ESCAPE TO NATURE —</span>
+          <h1 className="hero-title">
+            Book Your Perfect<br />
+            <span className="highlight">Farm House Getaway</span>
           </h1>
-
           <p className="hero-subtitle">
-            Hand-picked estates with private pools, bonfires, personal chefs & breathtaking views — across {stats.cities}+ destinations in India.
+            Enjoy nature, fresh air and unforgettable moments with your loved ones.
           </p>
 
-         
-
-          <div className="hero-cta-row">
-            <Link to="/farmhouses" className="btn-lux-primary">
-              Browse All Estates →
-            </Link>
-            {(offersCount > 0 || user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
-              <a href="#discounts" className="btn-lux-outline">
-                🔥 Special Discounts
-              </a>
-            )}
-            {!user && (
-              <Link to="/register" className="btn-lux-outline">
-                Create Free Account
-              </Link>
-            )}
-            {user && (
-              <Link to="/my-bookings" className="btn-lux-outline">
-                My Bookings
-              </Link>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ STATS RIBBON ═══════════ */}
-      <section className="stats-ribbon">
-        <div className="ribbon-item">
-          <span className="ribbon-num">{stats.houses}+</span>
-          <span className="ribbon-label">Premium Estates</span>
-        </div>
-        <div className="ribbon-divider"></div>
-        <div className="ribbon-item">
-          <span className="ribbon-num">{(stats.guests / 1000).toFixed(1)}k+</span>
-          <span className="ribbon-label">Happy Guests</span>
-        </div>
-        <div className="ribbon-divider"></div>
-        <div className="ribbon-item">
-          <span className="ribbon-num">{stats.rating}</span>
-          <span className="ribbon-label">★ Avg Rating</span>
-        </div>
-        <div className="ribbon-divider"></div>
-        <div className="ribbon-item">
-          <span className="ribbon-num">{stats.cities}+</span>
-          <span className="ribbon-label">Cities Covered</span>
-        </div>
-      </section>
-
-      {/* ═══════════ CHOOSE YOUR VIBE ═══════════ */}
-      <section className="vibe-section">
-        <div className="section-intro">
-          <span className="section-chip">✨ CHOOSE YOUR VIBE</span>
-          <h2>What Kind of Escape Do You Crave?</h2>
-          <p>Click a vibe to instantly filter estates that match your mood</p>
-        </div>
-
-        <div className="vibe-deck">
-          {VIBE_CARDS.map((vibe, idx) => (
-            <div
-              key={idx}
-              className={`vibe-card ${activeVibe === vibe.filter ? 'active' : ''}`}
-              onClick={() => handleVibeClick(vibe)}
-            >
-              <div className="vibe-card-img" style={{ backgroundImage: `url(${vibe.img})` }}>
-                <div className="vibe-card-overlay" style={{ background: vibe.gradient, opacity: 0.75 }}></div>
-                <div className="vibe-card-body">
-                  <span className="vibe-emoji">{vibe.emoji}</span>
-                  <h3>{vibe.title}</h3>
-                  <p>{vibe.desc}</p>
-                  <span className="vibe-cta">{activeVibe === vibe.filter ? '✓ Active' : 'Explore →'}</span>
-                </div>
+          {/* Floating Search Bar */}
+          <form className="search-bar-card" onSubmit={handleSearchSubmit}>
+            <div className="search-field">
+              <span className="search-icon">📍</span>
+              <div className="search-field-content">
+                <label>Location</label>
+                <input
+                  type="text"
+                  placeholder="Where do you want to go?"
+                  value={searchLoc}
+                  onChange={(e) => setSearchLoc(e.target.value)}
+                />
               </div>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* ═══════════ FEATURED ESTATES ═══════════ */}
-      <section className="estates-section" ref={featuredRef}>
-        <div className="section-intro">
-          <span className="section-chip">🏡 FEATURED ESTATES</span>
-          <h2>Handpicked Luxury Farmhouses</h2>
-          <p>Every property is personally verified for quality, hygiene, and premium amenities</p>
-        </div>
-
-        {(searchLoc || searchGuests || searchPrice) && (
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <button onClick={clearSearch} className="clear-search-pill">✕ Clear Search Filters</button>
-          </div>
-        )}
-
-        {loading ? (
-          <div className="loading-spinner-box">
-            <div className="lux-spinner"></div>
-            <p>Discovering beautiful estates...</p>
-          </div>
-        ) : (
-          <div className="estates-grid">
-            {displayList.map((fh, idx) => (
-              <div key={fh.id} className="estate-card" style={{ animationDelay: `${idx * 0.08}s` }}>
-                <div className="estate-img-wrap">
-                  <img
-                    src={fh.imageUrl || 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=500'}
-                    alt={fh.name}
-                  />
-                  <div className="estate-price-badge">₹{fh.pricePerDay?.toLocaleString()}<small>/night</small></div>
-                  <div className="estate-loc-badge">📍 {fh.location}</div>
-                </div>
-                <div className="estate-body">
-                  <h3>{fh.name}</h3>
-                  <p className="estate-desc">{fh.description?.substring(0, 90)}...</p>
-                  <div className="estate-meta">
-                    <span>🛏️ {fh.bedrooms || 3}</span>
-                    <span>🚿 {fh.bathrooms || 3}</span>
-                    <span>👥 {fh.maxGuests || 6}</span>
-                  </div>
-                  <div className="estate-card-actions">
-                    <Link to={`/farmhouses/${fh.id}`} className="estate-view-btn estate-book-btn">
-                      View Details →
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!loading && displayList.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '3rem' }}>
-            <Link to="/farmhouses" className="btn-lux-primary" style={{ padding: '0.8rem 2.5rem', borderRadius: '30px' }}>
-              See More →
-            </Link>
-          </div>
-        )}
-
-        {displayList.length === 0 && !loading && (
-          <div className="no-results-box">
-            <h3>😔 No estates matched your criteria</h3>
-            <p>Try changing your destination, budget, or guest count.</p>
-            <button onClick={clearSearch} className="clear-search-pill">Reset All Filters</button>
-          </div>
-        )}
-      </section>
-
-      {/* ═══════════ DISCOUNTS & SPECIAL OFFERS ═══════════ */}
-      <DiscountsSection onOffersCount={setOffersCount} />
-
-      {/* ═══════════ BUDGET ESTIMATOR ═══════════ */}
-      <section className="budget-section">
-        <div className="section-intro light">
-          <span className="section-chip light">📐 SMART BUDGET PLANNER</span>
-          <h2>Estimate Your Stay Cost Instantly</h2>
-          <p>Customize nights, guests, and premium add-on packages to see real-time pricing</p>
-        </div>
-        <div className="budget-wrapper">
-          <BudgetCalculator />
-        </div>
-      </section>
-
-      {/* ═══════════ WHY US ═══════════ */}
-      <section className="why-section">
-        <div className="section-intro">
-          <span className="section-chip">🏆 WHY CHOOSE US</span>
-          <h2>The Premium Booking Experience</h2>
-        </div>
-        <div className="why-grid">
-          <div className="why-card">
-            <div className="why-icon-circle" style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)' }}>🔒</div>
-            <h3>100% Secure Payment</h3>
-            <p>SSL-encrypted transactions with instant refunds within 48 hours of cancellation. Your money is always protected.</p>
-          </div>
-          <div className="why-card">
-            <div className="why-icon-circle" style={{ background: 'linear-gradient(135deg, #11998e, #38ef7d)' }}>✅</div>
-            <h3>Personally Verified</h3>
-            <p>Every pool, bonfire pit, garden, and kitchen is physically inspected and certified for hygiene and comfort standards.</p>
-          </div>
-          <div className="why-card">
-            <div className="why-icon-circle" style={{ background: 'linear-gradient(135deg, #f6d365, #fda085)' }}>🧑‍🍳</div>
-            <h3>On-Site Caretakers</h3>
-            <p>Dedicated staff at every farmhouse for meal preparation, bonfire setups, and any personal requests during your stay.</p>
-          </div>
-          <div className="why-card">
-            <div className="why-icon-circle" style={{ background: 'linear-gradient(135deg, #a8edea, #fed6e3)' }}>⏰</div>
-            <h3>Instant Confirmation</h3>
-            <p>No waiting. Book now, get confirmed in under 60 seconds. Receive your check-in details and caretaker contact immediately.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ TESTIMONIALS ═══════════ */}
-      <section className="reviews-section">
-        <div className="section-intro">
-          <span className="section-chip">💬 GUEST STORIES</span>
-          <h2>Hear From Our Happy Guests</h2>
-        </div>
-
-        <div className="reviews-layout">
-          {/* Carousel */}
-          <div className="review-showcase">
-            <div className="review-quote-card">
-              <div className="rq-stars">{'★'.repeat(testimonials[activeReviewIdx].rating)}{'☆'.repeat(5 - testimonials[activeReviewIdx].rating)}</div>
-              <p className="rq-text">"{testimonials[activeReviewIdx].comment}"</p>
-              <div className="rq-author">
-                <span className="rq-avatar">{testimonials[activeReviewIdx].avatar}</span>
-                <div>
-                  <strong>{testimonials[activeReviewIdx].name}</strong>
-                  <span>{testimonials[activeReviewIdx].role}</span>
-                </div>
+            <div className="search-field">
+              <span className="search-icon">📅</span>
+              <div className="search-field-content">
+                <label>Check In</label>
+                <input
+                  type="date"
+                  value={checkInDate}
+                  onChange={(e) => setCheckInDate(e.target.value)}
+                />
               </div>
             </div>
-            {/* Dot navigation */}
-            <div className="review-dots">
-              {testimonials.map((_, idx) => (
+
+            <div className="search-field">
+              <span className="search-icon">📅</span>
+              <div className="search-field-content">
+                <label>Check Out</label>
+                <input
+                  type="date"
+                  value={checkOutDate}
+                  onChange={(e) => setCheckOutDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="search-field">
+              <span className="search-icon">👥</span>
+              <div className="search-field-content">
+                <label>Guests</label>
+                <select
+                  value={guestsCount}
+                  onChange={(e) => setGuestsCount(e.target.value)}
+                >
+                  <option value="1">1 Guest</option>
+                  <option value="2">2 Guests</option>
+                  <option value="4">4 Guests</option>
+                  <option value="6">6 Guests</option>
+                  <option value="10">10+ Guests</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" className="search-btn">
+              🔍 Search
+            </button>
+          </form>
+        </div>
+      </section>
+
+      {/* 2. FEATURES STRIP (4 Floating Cards) */}
+      <div className="features-strip-container">
+        <div className="features-strip">
+          <div className="feature-pill-card">
+            <div className="feature-pill-icon">🍃</div>
+            <div className="feature-pill-text">
+              <h4>Nature & Fresh Air</h4>
+              <p>Rejuvenate your mind</p>
+            </div>
+          </div>
+
+          <div className="feature-pill-card">
+            <div className="feature-pill-icon">🏡</div>
+            <div className="feature-pill-text">
+              <h4>Spacious Farm Houses</h4>
+              <p>Comfortable stays</p>
+            </div>
+          </div>
+
+          <div className="feature-pill-card">
+            <div className="feature-pill-icon">🛡️</div>
+            <div className="feature-pill-text">
+              <h4>Safe & Secure</h4>
+              <p>Your safety, our priority</p>
+            </div>
+          </div>
+
+          <div className="feature-pill-card">
+            <div className="feature-pill-icon">👨‍👩‍👧‍👦</div>
+            <div className="feature-pill-text">
+              <h4>Perfect for Families</h4>
+              <p>Create lasting memories</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. FEATURED FARM HOUSES */}
+      <section className="section-wrapper">
+        <div className="section-header-row">
+          <div>
+            <span className="section-pretitle">FEATURED FARM HOUSES</span>
+            <h2 className="section-title">Discover Our Most Popular Farm Houses</h2>
+            <p className="section-subtitle">Handpicked stays for a perfect countryside experience.</p>
+          </div>
+          <Link to="/farmhouses" className="view-all-link">
+            View All →
+          </Link>
+        </div>
+
+        <div className="farmhouse-cards-grid">
+          {displayedList.map((fh) => (
+            <div key={fh.id} className="fh-card">
+              <div className="fh-card-img-box">
+                <img src={fh.imageUrl} alt={fh.name} className="fh-card-img" />
+                {fh.isBestSeller && <span className="badge-bestseller">Best Seller</span>}
                 <button
-                  key={idx}
-                  className={`dot ${activeReviewIdx === idx ? 'active' : ''}`}
-                  onClick={() => setActiveReviewIdx(idx)}
-                ></button>
-              ))}
-            </div>
-            <div className="review-nav-arrows">
-              <button onClick={() => setActiveReviewIdx((activeReviewIdx - 1 + testimonials.length) % testimonials.length)}>← Prev</button>
-              <button onClick={() => setActiveReviewIdx((activeReviewIdx + 1) % testimonials.length)}>Next →</button>
-            </div>
-          </div>
-
-          {/* Add review form */}
-          <div className="review-form-card">
-            <h3>Share Your Experience</h3>
-            <p>Your review helps other travelers find their perfect farmhouse</p>
-            {reviewMsg && <div className="review-success-msg">{reviewMsg}</div>}
-            <form onSubmit={handleAddReview}>
-              <select value={newReview.farmHouseId} onChange={(e) => setNewReview({ ...newReview, farmHouseId: e.target.value })} required disabled={!user || loading}>
-                <option value="">Select the farmhouse you stayed at</option>
-                {farmhouses.map((farmhouse) => (
-                  <option key={farmhouse.id} value={farmhouse.id}>{farmhouse.name}</option>
-                ))}
-              </select>
-              <textarea placeholder="Describe your experience..." rows="4" value={newReview.comment} onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })} required></textarea>
-              <div className="rf-footer">
-                <div className="rf-rating">
-                  <label>Rating:</label>
-                  <select value={newReview.rating} onChange={(e) => setNewReview({ ...newReview, rating: parseInt(e.target.value) })}>
-                    {[5, 4, 3, 2, 1].map((r) => <option key={r} value={r}>{r} Star{r > 1 ? 's' : ''}</option>)}
-                  </select>
-                </div>
-                <button type="submit" className="rf-submit-btn" disabled={reviewLoading || !user}>
-                  {reviewLoading ? 'Publishing...' : user ? 'Publish Review →' : 'Log in to Review'}
+                  type="button"
+                  className="heart-btn"
+                  onClick={(e) => toggleFavorite(fh.id, e)}
+                  aria-label="Save to favorites"
+                >
+                  {favorites[fh.id] ? '❤️' : '🤍'}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      </section>
 
-      {/* ═══════════ FAQ ═══════════ */}
-      <section className="faq-section-lux">
-        <div className="section-intro">
-          <span className="section-chip">❓ FAQ</span>
-          <h2>Frequently Asked Questions</h2>
-          <p>Quick answers to common booking queries</p>
-        </div>
-        <div className="faq-list-lux">
-          {FAQS.map((faq, idx) => (
-            <div key={idx} className={`faq-item-lux ${activeFaq === idx ? 'open' : ''}`}>
-              <button className="faq-q-btn" onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}>
-                <span>{faq.q}</span>
-                <span className="faq-arrow">{activeFaq === idx ? '−' : '+'}</span>
-              </button>
-              <div className="faq-a-body">
-                <p>{faq.a}</p>
+              <div className="fh-card-body">
+                <h3 className="fh-card-title">{fh.name}</h3>
+                <div className="fh-card-location">
+                  <span>📍</span> {fh.location || 'Maharashtra, India'}
+                </div>
+
+                <div className="fh-card-footer">
+                  <div className="fh-price-box">
+                    <div className="fh-price">
+                      ₹{fh.pricePerDay?.toLocaleString()} <span>/ night</span>
+                    </div>
+                    <div className="fh-rating">
+                      <span className="star">★</span> {fh.rating || '4.8'} ({fh.reviewsCount || 20} reviews)
+                    </div>
+                  </div>
+
+                  <Link to={`/farmhouses/${fh.id}`} className="fh-view-btn">
+                    View Details
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ═══════════ FINAL CTA ═══════════ */}
-      <section className="final-cta">
-        <div className="cta-blob blob-1"></div>
-        <div className="cta-blob blob-2"></div>
-        <div className="final-cta-content">
-          <h2>Ready for the Most Memorable Stay of Your Life?</h2>
-          <p>Join 12,500+ happy guests who found their perfect farmhouse escape with us.</p>
-          <div className="final-cta-btns">
-            <Link to="/farmhouses" className="btn-lux-primary large">Explore All Estates →</Link>
-            {!user && <Link to="/register" className="btn-lux-outline large light">Sign Up Free</Link>}
+      {/* 4. SPECIAL DISCOUNTS & OFFERS BANNER */}
+      <div className="promo-banner-container">
+        <div className="promo-banner">
+          <div className="promo-content">
+            <span className="promo-tag">✨ Plan Your Next Getaway</span>
+            <h2 className="promo-title">Special Discounts & Offers</h2>
+            <p className="promo-subtitle">
+              Get the best deals on your favorite farm houses. Book now and save more!
+            </p>
+            <Link to="/farmhouses" className="promo-btn">
+              Explore Offers →
+            </Link>
+          </div>
+          <div className="promo-badge-box">
+            <small>Up to</small>
+            20% OFF
+          </div>
+        </div>
+      </div>
+
+      {/* 5. WHY CHOOSE US & WHAT OUR GUESTS SAY (2 Columns) */}
+      <section className="dual-section-wrapper">
+        {/* Left Column: Why Choose Us */}
+        <div className="why-us-column">
+          <h3>Why Choose Us</h3>
+          <p className="sub">We make your farm house experience simple, safe and memorable.</p>
+
+          <div className="why-features-grid">
+            <div className="why-item">
+              <div className="why-icon-circle green">🛡️</div>
+              <h4>Verified Properties</h4>
+              <p>Only trusted farm houses</p>
+            </div>
+
+            <div className="why-item">
+              <div className="why-icon-circle blue">⚡</div>
+              <h4>Easy Booking</h4>
+              <p>Quick & hassle-free process</p>
+            </div>
+
+            <div className="why-item">
+              <div className="why-icon-circle teal">🎧</div>
+              <h4>24/7 Support</h4>
+              <p>We're always here for you</p>
+            </div>
+
+            <div className="why-item">
+              <div className="why-icon-circle yellow">🏷️</div>
+              <h4>Best Price Guarantee</h4>
+              <p>Get the best value</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: What Our Guests Say */}
+        <div className="testimonials-column">
+          <h3>What Our Guests Say</h3>
+          <p className="sub">Real stories from our happy travelers.</p>
+
+          {TESTIMONIALS_DATA.length > 0 && (
+            <div className="testi-card">
+              <img
+                src={TESTIMONIALS_DATA[currentTestimonial].avatar}
+                alt={TESTIMONIALS_DATA[currentTestimonial].name}
+                className="testi-avatar"
+              />
+              <div className="testi-body">
+                <p className="testi-quote">
+                  "{TESTIMONIALS_DATA[currentTestimonial].comment}"
+                </p>
+                <div className="testi-author">
+                  — {TESTIMONIALS_DATA[currentTestimonial].name}
+                </div>
+                <div className="testi-stars">
+                  {'★'.repeat(TESTIMONIALS_DATA[currentTestimonial].rating)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="testi-controls">
+            <button
+              type="button"
+              className="testi-nav-btn"
+              onClick={handlePrevTestimonial}
+              aria-label="Previous testimonial"
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              className="testi-nav-btn"
+              onClick={handleNextTestimonial}
+              aria-label="Next testimonial"
+            >
+              →
+            </button>
           </div>
         </div>
       </section>
 
-      {/* Floating chatbot */}
+      {/* Floating chatbot assistant */}
       <ExperienceChatbot />
     </div>
   );

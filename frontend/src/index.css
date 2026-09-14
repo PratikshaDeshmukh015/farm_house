@@ -3,38 +3,41 @@
   --font-heading: 'Playfair Display', Georgia, serif;
   --font-body: 'Outfit', 'Segoe UI', Roboto, sans-serif;
 
-  --primary: #667eea;
-  --primary-dark: #764ba2;
-  --secondary: #f093fb;
-  --accent: #4facfe;
-  --accent-warm: #f6d365;
-  --success: #00d2d3;
-  --danger: #ff6b6b;
-  --warning: #ffd93d;
+  /* Green theme palette */
+  --primary: #1a6b3c;
+  --primary-dark: #145530;
+  --primary-light: #2d8a4e;
+  --primary-hover: #1e7e44;
+  --secondary: #4caf7d;
+  --accent: #8bc34a;
+  --accent-warm: #f6c90e;
+  --success: #00c853;
+  --danger: #e53935;
+  --warning: #ffc107;
 
-  --text-dark: #1a1a2e;
-  --text-body: #4a5568;
-  --text-light: #718096;
-  --text-muted: #a0aec0;
-  --bg-light: #f7fafc;
+  --text-dark: #1a2e20;
+  --text-body: #3d4d3f;
+  --text-light: #5c7263;
+  --text-muted: #90a896;
+  --bg-light: #f4fbf6;
   --bg-white: #ffffff;
-  --bg-cream: #faf8f5;
-  --border-light: #e2e8f0;
+  --bg-cream: #f8fdf9;
+  --border-light: #d4eadb;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.12);
-  --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.15);
-  --shadow-glow: 0 0 40px rgba(102, 126, 234, 0.15);
+  --shadow-sm: 0 1px 3px rgba(26, 107, 60, 0.08);
+  --shadow-md: 0 4px 12px rgba(26, 107, 60, 0.10);
+  --shadow-lg: 0 10px 25px rgba(26, 107, 60, 0.14);
+  --shadow-xl: 0 20px 50px rgba(26, 107, 60, 0.18);
+  --shadow-glow: 0 0 40px rgba(26, 107, 60, 0.18);
 
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-bounce: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
-  --navbar-height: 80px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  --navbar-height: 70px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
 }
 
 /* ========== RESET & GLOBAL STYLES ========== */
@@ -79,11 +82,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 {
-  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-size: clamp(2.2rem, 4.5vw, 4rem);
 }
 
 h2 {
-  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
 }
 
 p {
