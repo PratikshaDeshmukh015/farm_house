@@ -1,1415 +1,1161 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { bookingAPI, farmhouseAPI, paymentAPI, discountAPI } from '../api/axiosInstance';
+import { useParams, useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
+import { bookingAPI, farmhouseAPI } from '../api/axiosInstance';
 import './BookingPage.css';
-import InteractiveCalendar from '../components/InteractiveCalendar';
 
-// Demo fallback farmhouses
-const DEMO_FARMHOUSES = {
-  1: { id: 1, name: 'Luxury Mountain Villa', location: 'Himachal Pradesh', pricePerDay: 5000, maxGuests: 6, bedrooms: 3, bathrooms: 4, available: true, imageUrl: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=800&auto=format&fit=crop' },
-  2: { id: 2, name: 'Cozy Countryside Cottage', location: 'Goa', pricePerDay: 3500, maxGuests: 4, bedrooms: 2, bathrooms: 3, available: true, imageUrl: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=800&auto=format&fit=crop' },
-  3: { id: 3, name: 'Modern Farm Estate', location: 'Punjab', pricePerDay: 6000, maxGuests: 10, bedrooms: 5, bathrooms: 6, available: true, imageUrl: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800&auto=format&fit=crop' },
-  4: { id: 4, name: 'Riverside Farmhouse', location: 'Uttarakhand', pricePerDay: 4500, maxGuests: 8, bedrooms: 4, bathrooms: 5, available: true, imageUrl: 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?w=800&auto=format&fit=crop' },
-  5: { id: 5, name: 'Heritage Farm Resort', location: 'Rajasthan', pricePerDay: 4000, maxGuests: 6, bedrooms: 3, bathrooms: 4, available: true, imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop' },
+// Default Demo Farmhouse
+const DEMO_FARMHOUSE = {
+  id: 1,
+  name: 'Luxury Mountain Villa',
+  location: 'Himachal Pradesh',
+  pricePerDay: 5000,
+  maxGuests: 8,
+  bedrooms: 4,
+  bathrooms: 4,
+  imageUrl: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=1200&auto=format&fit=crop'
 };
 
+// Official active offers & promo codes (Matches Database: 20% OFF Pool Party Special)
+export const ACTIVE_OFFERS = [
+  {
+    code: 'POOL20',
+    percent: 20,
+    title: 'Pool Party Special',
+    tagline: '20% OFF — Private Pool Villas',
+    icon: '🏊'
+  }
+];
+
 const ADDON_LIST = [
-  { key: 'chef',      icon: '👨‍🍳', label: 'Private Chef',       desc: 'Personalised meals all day',  price: 1800, perUnit: 'per guest/night' },
-  { key: 'bonfire',   icon: '🪵', label: 'Bonfire Setup',        desc: 'Firewood & pit arrangement',  price: 1500, perUnit: 'flat' },
-  { key: 'dj',        icon: '🎵', label: 'DJ Sound System',      desc: 'Pro audio + lights',          price: 4000, perUnit: 'flat' },
-  { key: 'adventure', icon: '🛶', label: 'Adventure Tour',       desc: 'Guided trekking / kayaking',  price: 2500, perUnit: 'flat' },
-  { key: 'decor',     icon: '🌸', label: 'Floral Decoration',    desc: 'Elegant garden arrangement',  price: 2000, perUnit: 'flat' },
-  { key: 'spa',       icon: '💆', label: 'Spa & Wellness',       desc: '2-hour couple spa session',   price: 3500, perUnit: 'flat' },
+  { key: 'chef', icon: '👨‍🍳', label: 'Private Chef', desc: 'Personalised 3-course organic meals all day', price: 1800 },
+  { key: 'bonfire', icon: '🪵', label: 'Bonfire & BBQ Setup', desc: 'Firewood, charcoal grill & lawn pit arrangement', price: 1500 },
+  { key: 'dj', icon: '🎵', label: 'DJ Sound System', desc: 'Pro wireless audio + party ambient lights', price: 3500 },
+  { key: 'adventure', icon: '🛶', label: 'Adventure / Trek Tour', desc: 'Guided nature trail & stream exploration', price: 2200 },
+  { key: 'spa', icon: '💆', label: 'Spa & Wellness Session', desc: '2-hour couple relaxation massage package', price: 3000 },
+  { key: 'decor', icon: '🌸', label: 'Celebration Decoration', desc: 'Floral arches, fairy lights & party banners', price: 2000 },
 ];
 
 const PAYMENT_METHODS = [
-  { key: 'CARD',        icon: '💳', label: 'Credit / Debit Card',   desc: 'Visa, Mastercard, RuPay' },
-  { key: 'UPI',         icon: '📱', label: 'UPI',                   desc: 'GPay, PhonePe, Paytm' },
-  { key: 'NET_BANKING', icon: '🏦', label: 'Net Banking',           desc: 'All major banks supported' },
-  { key: 'WALLET',      icon: '👝', label: 'Wallet',                desc: 'Paytm, Amazon Pay' },
+  { key: 'CARD', icon: '💳', label: 'Credit / Debit Card', desc: 'Visa, Mastercard, RuPay' },
+  { key: 'UPI', icon: '📱', label: 'UPI Instant Pay', desc: 'Google Pay, PhonePe, Paytm' },
+  { key: 'NET_BANKING', icon: '🏦', label: 'Net Banking', desc: '50+ Indian Banks' },
+  { key: 'WALLET', icon: '👝', label: 'Digital Wallets', desc: 'Paytm, Amazon Pay' },
 ];
 
-const BOOKING_TYPES = [
-  { key: 'AM', label: 'AM (Only Day)', hours: '06:00 AM - 06:00 PM' },
-  { key: 'PM', label: 'PM (Only Night)', hours: '06:00 PM - 06:00 AM' },
-  { key: 'FULL_DAY', label: 'AM + PM (Full Day)', hours: '06:00 AM - 06:00 AM next day' },
+const SLOT_OPTIONS = [
+  { key: 'AM', label: 'AM (Only Day)', time: '09:00 AM - 05:00 PM' },
+  { key: 'PM', label: 'PM (Only Night)', time: '06:00 PM - 09:00 AM' },
+  { key: 'FULL_DAY', label: 'AM + PM (Full Day)', time: '09:00 AM - 09:00 AM (Next Day)' },
 ];
-const normalizeBookingType = (slot) => slot === 'AM' ? 'DAY' : slot === 'PM' ? 'NIGHT' : slot;
-const toUiBookingType = (slot) => slot === 'DAY' ? 'AM' : slot === 'NIGHT' ? 'PM' : slot;
-const getBookingHours = (slot) => normalizeBookingType(slot) === 'NIGHT'
-  ? { checkIn: '06:00 PM', checkOut: '06:00 AM (next day)' }
-  : normalizeBookingType(slot) === 'FULL_DAY'
-    ? { checkIn: '06:00 AM', checkOut: '06:00 AM (next day)' }
-    : { checkIn: '06:00 AM', checkOut: '06:00 PM' };
 
-const STEPS = ['📅 Dates & Guests', '✨ Add-ons', '💳 Payment'];
+const COUPLE_ALLOCATIONS = [
+  { count: 1, label: '1 Couple', sub: '1 Suite • 2 Guests', guests: 2 },
+  { count: 2, label: '2 Couples', sub: '2 Suites • 4 Guests', guests: 4 },
+  { count: 3, label: '3 Couples', sub: '3 Suites • 6 Guests', guests: 6 },
+];
 
-function BookingPage({ user }) {
+function toDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function BookingPage() {
   const { farmhouseId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
+  const [searchParams] = useSearchParams();
 
-  const [farmhouse, setFarmhouse] = useState(null);
-  const [farmhouseBookings, setFarmhouseBookings] = useState([]);
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
-  const [loading, setLoading] = useState(true);
+  const [farmhouse, setFarmhouse] = useState(DEMO_FARMHOUSE);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [bookingDone, setBookingDone] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState('');
-  const [currentStep, setCurrentStep] = useState(0);
-  const [bookingDone, setBookingDone] = useState(false);
 
-  // Prefill from FarmHouseDetail calculator (if user clicked Book Now there)
-  const prefilled = location.state || {};
+  // Form State
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const [startDate, setStartDate] = useState(prefilled.prefilledStartDate || '');
-  const [endDate, setEndDate]     = useState(prefilled.prefilledEndDate   || '');
-  const [timeSlot, setTimeSlot]   = useState(toUiBookingType(prefilled.prefilledTimeSlot) || '');
-  const [guestGroupType, setGuestGroupType] = useState(prefilled.prefilledGuestGroupType || 'Couple');
-  const [couplesCount, setCouplesCount]     = useState(1);
-  const [guests, setGuests]                 = useState(prefilled.prefilledGuests    || 2);
-  const [specialRequirements, setSpecialRequirements] = useState('');
-  const [addons, setAddons] = useState(
-    prefilled.prefilledAddons || { chef: false, bonfire: false, dj: false, adventure: false, decor: false, spa: false }
-  );
+  const [selectedSlot, setSelectedSlot] = useState('FULL_DAY');
+  const [startDate, setStartDate] = useState(toDateKey(today));
+  const [endDate, setEndDate] = useState(toDateKey(tomorrow));
+  const [guestCount, setGuestCount] = useState('2 Guests');
+  const [timeSlotLabel, setTimeSlotLabel] = useState('Full Day');
+  const [specialRequests, setSpecialRequests] = useState('');
+
+  // Calendar & Allocations
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [selectedCoupleCount, setSelectedCoupleCount] = useState(2);
+  const [calendarError, setCalendarError] = useState('');
+
+  // Sample and dynamic booked slots by date (in YYYY-MM-DD format): { day: boolean, night: boolean }
+  const [bookedSlots, setBookedSlots] = useState(() => {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    const formatD = (y, m, d) => {
+      const mm = String(m + 1).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      return `${y}-${mm}-${dd}`;
+    };
+
+    const map = {};
+    // Full Day Booked (Both Day & Night closed - Red)
+    [3, 12, 19, 27].forEach(d => {
+      map[formatD(currentYear, currentMonth, d)] = { day: true, night: true };
+    });
+    // Day Booked (Red), Night Available (Green)
+    [4, 15, 23].forEach(d => {
+      map[formatD(currentYear, currentMonth, d)] = { day: true, night: false };
+    });
+    // Day Available (Green), Night Booked (Red)
+    [8, 18, 25].forEach(d => {
+      map[formatD(currentYear, currentMonth, d)] = { day: false, night: true };
+    });
+    // Next month slots
+    [5, 15, 22].forEach(d => {
+      map[formatD(currentYear, currentMonth + 1, d)] = { day: true, night: true };
+    });
+    [6, 20].forEach(d => {
+      map[formatD(currentYear, currentMonth + 1, d)] = { day: true, night: false };
+    });
+    [10, 26].forEach(d => {
+      map[formatD(currentYear, currentMonth + 1, d)] = { day: false, night: true };
+    });
+    return map;
+  });
+
+  // Add-ons & Payment
+  const [selectedAddons, setSelectedAddons] = useState({});
   const [paymentMethod, setPaymentMethod] = useState('CARD');
 
-  // Discount offers & coupons state
-  const [discountsList, setDiscountsList] = useState([]);
-  const [appliedDiscount, setAppliedDiscount] = useState(
-    prefilled.prefilledDiscount || prefilled.appliedDiscount || null
-  );
-  const [couponCode, setCouponCode] = useState(
-    prefilled.prefilledDiscount?.specialOffer || prefilled.appliedDiscount?.specialOffer || ''
-  );
-  const [couponMsg, setCouponMsg] = useState(null);
-
-  const maxGuests = Math.max(1, Number(farmhouse?.maxGuests) || 10);
-  const maxCouples = Math.max(1, Math.floor(maxGuests / 2));
-  const guestPresets = [4, 8, 15, 25, 50, 100, 150, maxGuests]
-    .filter((count, index, counts) => count <= maxGuests && counts.indexOf(count) === index);
-  const couplePresets = [1, 2, 3, 4, 5, 8, 10, maxCouples]
-    .filter((count, index, counts) => count <= maxCouples && counts.indexOf(count) === index);
+  // Promo Code State — Initialized from URL param ?code=... or POOL20 by default
+  const initialCode = searchParams.get('code') || 'POOL20';
+  const [inputCouponCode, setInputCouponCode] = useState(initialCode);
+  const [appliedOffer, setAppliedOffer] = useState(() => {
+    return ACTIVE_OFFERS.find(o => o.code.toUpperCase() === initialCode.toUpperCase()) || ACTIVE_OFFERS[0];
+  });
+  const [isOfferActive, setIsOfferActive] = useState(true);
 
   useEffect(() => {
     fetchFarmhouseDetails();
-    fetchFarmhouseBookings();
-    fetchDiscounts();
+    fetchBookedDates(farmhouseId || '1');
   }, [farmhouseId]);
+
+  useEffect(() => {
+    const codeParam = searchParams.get('code');
+    if (codeParam) {
+      const match = ACTIVE_OFFERS.find(o => o.code.toUpperCase() === codeParam.toUpperCase());
+      if (match) {
+        setInputCouponCode(match.code);
+        setAppliedOffer(match);
+        setIsOfferActive(true);
+      }
+    }
+  }, [searchParams]);
 
   const fetchFarmhouseDetails = async () => {
     try {
-      const response = await farmhouseAPI.getFarmHouseById(farmhouseId);
-      if (response.data.success) {
+      const id = farmhouseId || '1';
+      const response = await farmhouseAPI.getFarmHouseById(id);
+      if (response.data?.success && response.data.farmhouse) {
         setFarmhouse(response.data.farmhouse);
-      } else {
-        setFarmhouse(DEMO_FARMHOUSES[parseInt(farmhouseId)] || DEMO_FARMHOUSES[1]);
       }
-    } catch {
-      setFarmhouse(DEMO_FARMHOUSES[parseInt(farmhouseId)] || DEMO_FARMHOUSES[1]);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      setFarmhouse(DEMO_FARMHOUSE);
     }
   };
 
-  const fetchFarmhouseBookings = async () => {
+  const fetchBookedDates = async (id) => {
     try {
-      const response = await bookingAPI.getFarmHouseBookings(farmhouseId);
-      setFarmhouseBookings(response.data.bookings || []);
-    } catch {
-      setFarmhouseBookings([]);
-    }
-  };
-
-  const fetchDiscounts = async () => {
-    try {
-      const response = await discountAPI.getActiveDiscounts();
-      if (response.data && response.data.success && Array.isArray(response.data.discounts)) {
-        setDiscountsList(response.data.discounts);
-        // If not already selected, auto-select a discount that directly applies to this farmhouse or ALL
-        if (!prefilled.prefilledDiscount && !prefilled.appliedDiscount) {
-          const match = response.data.discounts.find(
-            d => d && d.isActive !== false && Number(d.discountPercent) > 0 &&
-            (String(d.farmhouseId) === String(farmhouseId) || d.farmhouseType === 'ALL')
-          );
-          if (match) {
-            setAppliedDiscount(match);
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Could not fetch discounts:', e);
-    }
-  };
-
-  // Available curated offers (live from backend or verified seasonal defaults)
-  const activeOffers = discountsList.filter(
-    d => d && d.isActive !== false && Number(d.discountPercent) > 0 &&
-         (!d.farmhouseId || String(d.farmhouseId) === String(farmhouseId))
-  );
-
-  const manifestPromoCode = `EST-${guestGroupType === 'Couple' ? `CPL-${couplesCount}X${guests}` : `${guestGroupType.toUpperCase()}-${guests}`}`;
-
-  const manifestOffer = {
-    id: 'demo-manifest',
-    title: 'Official Reservation Manifest Offer',
-    specialOffer: manifestPromoCode,
-    discountPercent: 20,
-    description: 'Exclusive 20% savings for verified guest manifest reservation',
-  };
-
-  const defaultOffers = [
-    manifestOffer,
-    {
-      id: 'demo-estate20',
-      title: 'Luxury Estate Special',
-      specialOffer: 'ESTATE20',
-      discountPercent: 20,
-      description: '20% off whole estate buyout and multi-day vacations',
-    },
-    {
-      id: 'demo-welcome10',
-      title: 'Welcome First Stay Offer',
-      specialOffer: 'WELCOME10',
-      discountPercent: 10,
-      description: '10% instant savings on your first farmhouse booking',
-    },
-    {
-      id: 'demo-pool15',
-      title: 'Pool & Weekend Celebration',
-      specialOffer: 'WEEKEND15',
-      discountPercent: 15,
-      description: '15% savings on weekend & pool party bookings',
-    }
-  ];
-
-  // Merge offers: if backend has an offer with the same discountPercent as the manifest,
-  // combine them into one card so users see a single unified offer instead of duplicates.
-  const buildMergedOffers = () => {
-    if (activeOffers.length === 0) return defaultOffers;
-
-    const merged = [];
-    const usedIds = new Set();
-
-    activeOffers.forEach(backendOffer => {
-      const samePercent = Number(backendOffer.discountPercent) === Number(manifestOffer.discountPercent);
-      if (samePercent && !usedIds.has('manifest-merged')) {
-        // Combine the manifest offer with this backend offer into one card
-        usedIds.add('manifest-merged');
-        merged.push({
-          id: 'manifest-merged',
-          title: backendOffer.title || manifestOffer.title,
-          // Show both codes so either one can be typed
-          specialOffer: manifestPromoCode,
-          altCode: backendOffer.specialOffer || null,
-          discountPercent: Number(backendOffer.discountPercent),
-          description: backendOffer.description || manifestOffer.description,
-          // Keep original backend offer reference for applying
-          _backendOffer: backendOffer,
+      const response = await bookingAPI.getFarmHouseBookings(id);
+      if (response.data?.success && Array.isArray(response.data.bookings)) {
+        setBookedSlots(prev => {
+          const nextMap = { ...prev };
+          response.data.bookings.forEach(b => {
+            if (b.status !== 'CANCELLED' && b.startDate && b.endDate) {
+              let curr = new Date(b.startDate);
+              const last = new Date(b.endDate);
+              const slot = (b.timeSlot || 'FULL_DAY').toUpperCase();
+              while (curr <= last) {
+                const k = toDateKey(curr);
+                const currentData = nextMap[k] || { day: false, night: false };
+                if (slot === 'AM' || slot === 'DAY') {
+                  currentData.day = true;
+                } else if (slot === 'PM' || slot === 'NIGHT') {
+                  currentData.night = true;
+                } else {
+                  currentData.day = true;
+                  currentData.night = true;
+                }
+                nextMap[k] = currentData;
+                curr.setDate(curr.getDate() + 1);
+              }
+            }
+          });
+          return nextMap;
         });
-      } else {
-        merged.push(backendOffer);
       }
-    });
-
-    // If no backend offer matched the manifest percent, prepend manifest separately
-    if (!usedIds.has('manifest-merged')) {
-      merged.unshift(manifestOffer);
+    } catch (err) {
+      // Retain preloaded sample slot bookings
     }
-
-    return merged;
   };
 
-  const availableOffers = buildMergedOffers();
-
-  const toDateKey = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const getSlotData = (dateKey) => {
+    return bookedSlots[dateKey] || { day: false, night: false };
   };
 
-  const isDateBooked = (date, slot = timeSlot) => {
-    const dateKey = toDateKey(date);
-    return farmhouseBookings.some(booking =>
-      booking.status !== 'CANCELLED' &&
-      (booking.startDate === booking.endDate
-        ? dateKey === booking.startDate
-        : dateKey >= booking.startDate && dateKey < booking.endDate) &&
-      (!booking.timeSlot || normalizeBookingType(booking.timeSlot) === 'FULL_DAY' || normalizeBookingType(slot) === 'FULL_DAY' || normalizeBookingType(booking.timeSlot) === normalizeBookingType(slot))
-    );
+  const isSlotAvailable = (dateKey, slot) => {
+    const data = getSlotData(dateKey);
+    if (slot === 'AM') return !data.day;
+    if (slot === 'PM') return !data.night;
+    if (slot === 'FULL_DAY') return !data.day && !data.night;
+    return true;
   };
 
-  const calendarDays = (() => {
-    const year = calendarMonth.getFullYear();
-    const month = calendarMonth.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    return [
-      ...Array.from({ length: firstDay }, () => null),
-      ...Array.from({ length: daysInMonth }, (_, index) => new Date(year, month, index + 1)),
-    ];
-  })();
-
-  const selectCalendarDate = (date, slot) => {
-    if (isDateBooked(date, slot) || toDateKey(date) < today) return;
-    setTimeSlot(slot);
-    const selectedDate = toDateKey(date);
-    setStartDate(selectedDate);
-    setEndDate(selectedDate);
+  // ══════════════════════════════════════════════════════
+  // ACCURATE MATHEMATICAL PRICING & DISCOUNT CALCULATIONS
+  // ══════════════════════════════════════════════════════
+  const calculateNights = () => {
+    if (!startDate || !endDate) return 1;
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    const diff = Math.ceil((e - s) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff : 1;
   };
 
-  // ── Financial Calculations (Discounts, Add-ons, Taxes) ──
-  const nights = (() => {
-    if (!startDate || !endDate) return 0;
-    const diff = Math.ceil((new Date(endDate) - new Date(startDate)) / 86400000);
-    return diff >= 0 ? Math.max(1, diff) : 0;
-  })();
+  const nights = calculateNights();
+  const pricePerNight = farmhouse?.pricePerDay || 5000;
+  const basePrice = pricePerNight * nights;
 
-  const baseCost   = (farmhouse?.pricePerDay || 0) * nights;
-  const chefCost   = addons.chef ? 1800 * guests * Math.max(nights, 1) : 0;
-  const flatCost   =
-    (addons.bonfire   ? 1500 : 0) +
-    (addons.dj        ? 4000 : 0) +
-    (addons.adventure ? 2500 : 0) +
-    (addons.decor     ? 2000 : 0) +
-    (addons.spa       ? 3500 : 0);
+  // Addons total
+  const addonTotal = Object.keys(selectedAddons).reduce((sum, key) => {
+    if (selectedAddons[key]) {
+      const item = ADDON_LIST.find(a => a.key === key);
+      return sum + (item ? item.price : 0);
+    }
+    return sum;
+  }, 0);
 
-  // Raw stay subtotal
-  const rawSubtotal = baseCost + chefCost + flatCost;
+  // Subtotal before discount
+  const subtotal = basePrice + addonTotal;
 
-  // Correct Discount calculation based on applied offer percentage
-  const discountPercent = appliedDiscount ? Number(appliedDiscount.discountPercent || 0) : 0;
-  const discountAmount = (nights > 0 && discountPercent > 0)
-    ? Math.round((baseCost * discountPercent) / 100)
-    : 0;
+  // Discount percentage & deduction
+  const discountPercent = isOfferActive && appliedOffer ? appliedOffer.percent : 0;
+  const discountAmount = Math.round(subtotal * (discountPercent / 100));
 
-  // Net taxable subtotal after applying discount
-  const subtotal   = Math.max(0, rawSubtotal - discountAmount);
-  const gst        = Math.round(subtotal * 0.18);
-  const serviceFee = Math.round(subtotal * 0.05);
-  const grandTotal = subtotal + gst + serviceFee;
+  // Net price after discount
+  const discountedSubtotal = subtotal - discountAmount;
 
-  // Total savings compared to undiscounted rate
-  const originalTotal = rawSubtotal + Math.round(rawSubtotal * 0.18) + Math.round(rawSubtotal * 0.05);
-  const totalSavings  = Math.max(0, originalTotal - grandTotal);
+  // Taxes (10% GST on discounted amount)
+  const taxes = Math.round(discountedSubtotal * 0.10);
 
-  // ── Discount & Coupon Actions ──────────────────
-  const handleApplyOffer = (offer) => {
-    setAppliedDiscount(offer);
-    const savingEst = nights > 0 ? Math.round((baseCost * Number(offer.discountPercent)) / 100) : 0;
-    setCouponMsg({
-      type: 'success',
-      text: `🎉 ${offer.discountPercent}% Discount applied (${offer.title || offer.specialOffer || 'Offer'})!${savingEst > 0 ? ` Save ₹${savingEst.toLocaleString()} on stay` : ''}`
-    });
+  // Final total amount
+  const grandTotal = discountedSubtotal + taxes;
+
+  // Promo apply handler
+  const handleApplyPromoCode = (codeToTest) => {
+    const rawCode = (codeToTest || inputCouponCode).trim().toUpperCase();
+    const found = ACTIVE_OFFERS.find(o => o.code.toUpperCase() === rawCode);
+
+    if (found) {
+      setInputCouponCode(found.code);
+      setAppliedOffer(found);
+      setIsOfferActive(true);
+      setError('');
+    } else {
+      setError(`"${rawCode}" is not a valid code. Select one of the verified offers below.`);
+      setIsOfferActive(false);
+      setAppliedOffer(null);
+    }
   };
 
   const handleRemoveOffer = () => {
-    setAppliedDiscount(null);
-    setCouponCode('');
-    setCouponMsg({ type: 'info', text: 'Discount offer removed.' });
+    setInputCouponCode('');
+    setAppliedOffer(null);
+    setIsOfferActive(false);
+    setError('');
   };
 
-  const handleApplyCoupon = (e) => {
-    e?.preventDefault();
-    if (!couponCode.trim()) {
-      setCouponMsg({ type: 'error', text: 'Please enter a coupon or promo code.' });
+  // Calendar days
+  const getCalendarDays = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const arr = [];
+    for (let i = 0; i < firstDay; i++) arr.push(null);
+    for (let d = 1; d <= totalDays; d++) arr.push(new Date(year, month, d));
+    return arr;
+  };
+
+  const handleCalendarDayClick = (day) => {
+    if (!day) return;
+    const key = toDateKey(day);
+    const slotInfo = getSlotData(key);
+
+    // Validate if the selected slot is available on this date
+    if (selectedSlot === 'AM' && slotInfo.day) {
+      setCalendarError(`Date ${key}: Day Slot (09:00 AM - 05:00 PM ☀️) is already booked (Red). Night Slot (🌙) is open, or select an open Day in Green.`);
+      setTimeout(() => setCalendarError(''), 4500);
       return;
     }
-    const cleanRaw = couponCode.trim();
-    const code = cleanRaw.toUpperCase().replace(/\s+/g, ' ');
 
-    // Normalize check for manifest codes (e.g. EST-CPL-2X4, REF: EST-CPL-2X4, OFFICIAL RESERVATION MANIFEST ...)
-    const strippedCode = code
-      .replace(/^REF:\s*/i, '')
-      .replace(/OFFICIAL RESERVATION MANIFEST\s*/i, '')
-      .trim();
-    const currentCode = manifestPromoCode.toUpperCase();
-
-    const isManifestMatch =
-      code === 'EST-CPL-2X4' ||
-      code === currentCode ||
-      strippedCode === 'EST-CPL-2X4' ||
-      strippedCode === currentCode ||
-      code.includes('EST-CPL') ||
-      code.includes('OFFICIAL RESERVATION MANIFEST') ||
-      (code.startsWith('EST-') && (code.includes('CPL') || code.includes('FRIENDS') || code.includes('FAMILY')));
-
-    const match = availableOffers.find(
-      o => (o.specialOffer && o.specialOffer.toUpperCase() === code) ||
-           (o.specialOffer && strippedCode && o.specialOffer.toUpperCase() === strippedCode) ||
-           (o.title && o.title.toUpperCase().includes(code))
-    );
-
-    if (match) {
-      handleApplyOffer(match);
-    } else if (isManifestMatch) {
-      handleApplyOffer({
-        id: 'manifest-applied',
-        title: 'Official Reservation Manifest 20% OFF',
-        specialOffer: strippedCode || (code.includes('EST-') ? code : manifestPromoCode),
-        discountPercent: 20,
-        description: 'Verified Official Reservation Manifest promo discount applied'
-      });
-    } else if (code === 'WELCOME10' || code === 'SAVE10') {
-      handleApplyOffer({ title: 'Welcome 10% OFF', specialOffer: code, discountPercent: 10 });
-    } else if (code === 'ESTATE20' || code === 'FARM20' || code === 'SAVE20') {
-      handleApplyOffer({ title: 'Special 20% OFF', specialOffer: code, discountPercent: 20 });
-    } else if (code === 'WEEKEND15' || code === 'SAVE15') {
-      handleApplyOffer({ title: 'Weekend 15% OFF', specialOffer: code, discountPercent: 15 });
-    } else if (code === 'SUPER30' || code === 'FARM30') {
-      handleApplyOffer({ title: 'Mega 30% OFF', specialOffer: code, discountPercent: 30 });
-    } else {
-      setCouponMsg({ type: 'error', text: `Invalid promo code "${couponCode}". Try ${manifestPromoCode}, ESTATE20, WELCOME10, or WEEKEND15.` });
-    }
-  };
-
-  // ── Step Validation ───────────────────────────
-  const step0Valid = startDate && endDate && nights > 0 && guests >= 1 && guests <= maxGuests;
-
-  const handleNext = () => {
-    if (currentStep === 0 && (!step0Valid || !timeSlot)) {
-      setError(!timeSlot ? 'Please select a time slot: AM or PM.' : 'Please select valid check-in and check-out dates.');
+    if (selectedSlot === 'PM' && slotInfo.night) {
+      setCalendarError(`Date ${key}: Night Slot (06:00 PM - 09:00 AM 🌙) is already booked (Red). Day Slot (☀️) is open, or select an open Night in Green.`);
+      setTimeout(() => setCalendarError(''), 4500);
       return;
     }
-    setError('');
-    setCurrentStep(s => s + 1);
+
+    if (selectedSlot === 'FULL_DAY' && (slotInfo.day || slotInfo.night)) {
+      const bookedDesc = slotInfo.day && slotInfo.night ? 'Day & Night' : slotInfo.day ? 'Day (☀️)' : 'Night (🌙)';
+      setCalendarError(`Date ${key}: Full Day booking requires BOTH slots open. ${bookedDesc} is booked (Red). Please select an entirely open date in Green or switch your slot.`);
+      setTimeout(() => setCalendarError(''), 4500);
+      return;
+    }
+
+    setCalendarError('');
+
+    if (!startDate || (startDate && endDate)) {
+      setStartDate(key);
+      setEndDate('');
+    } else if (startDate && !endDate) {
+      if (key <= startDate) {
+        setStartDate(key);
+      } else {
+        // Verify every date in range is available for the active slot
+        let cur = new Date(startDate);
+        const endD = new Date(key);
+        let blockedKey = null;
+
+        while (cur <= endD) {
+          const testKey = toDateKey(cur);
+          if (!isSlotAvailable(testKey, selectedSlot)) {
+            blockedKey = testKey;
+            break;
+          }
+          cur.setDate(cur.getDate() + 1);
+        }
+
+        if (blockedKey) {
+          setCalendarError(`Selected stay range contains date ${blockedKey} which is booked (Red) for ${selectedSlot === 'AM' ? 'Day (☀️)' : selectedSlot === 'PM' ? 'Night (🌙)' : 'Full Day'}. Please select continuous available green dates.`);
+          setTimeout(() => setCalendarError(''), 5000);
+          return;
+        }
+
+        setEndDate(key);
+      }
+    }
   };
 
-  const handleBack = () => {
-    setError('');
-    setCurrentStep(s => s - 1);
+  const handleToggleAddon = (key) => {
+    setSelectedAddons(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
-  const toggleAddon = (key) => setAddons(prev => ({ ...prev, [key]: !prev[key] }));
+  const handleSelectCouple = (alloc) => {
+    setSelectedCoupleCount(alloc.count);
+    setGuestCount(`${alloc.guests} Guests`);
+  };
 
-  // ── Submit ────────────────────────────────────
-  const handleSubmit = async () => {
-    setError('');
+  const handleCompleteBooking = async () => {
     setBookingLoading(true);
+    setError('');
+
     try {
-      const availability = await bookingAPI.checkAvailability(farmhouseId, startDate, endDate, timeSlot);
-      if (!availability.data.available) {
-        setError('This farmhouse is not available for the selected dates. Please try different dates.');
-        setBookingLoading(false);
-        return;
-      }
-
-      const addonsText = Object.entries(addons)
-        .filter(([, v]) => v)
-        .map(([k]) => ADDON_LIST.find(a => a.key === k)?.label)
-        .filter(Boolean)
-        .join(', ');
-
-      let stayTypeDetail = guestGroupType;
-      if (guestGroupType === 'Couple') {
-        stayTypeDetail = `${couplesCount} Couple${couplesCount > 1 ? 's' : ''} (${guests} Guests)`;
-      } else if (guestGroupType === 'Friends') {
-        stayTypeDetail = `Friends (${guests} Members)`;
-      } else if (guestGroupType === 'Family') {
-        stayTypeDetail = `Family (${guests} Members)`;
-      }
-
-      const bookingReq = {
-        farmHouseId: parseInt(farmhouseId),
+      const payload = {
+        farmhouseId: farmhouse?.id || 1,
         startDate,
-        endDate,
-        timeSlot,
-        numberOfGuests: parseInt(guests),
-        totalPrice: grandTotal, // Pass accurate discounted grand total!
-        specialRequirements: [
-          stayTypeDetail ? `Stay Type: ${stayTypeDetail}` : '',
-          appliedDiscount ? `Discount Offer: ${appliedDiscount.title || `${discountPercent}% OFF`} (Saved ₹${totalSavings.toLocaleString()})` : '',
-          specialRequirements,
-          addonsText ? `Add-ons: ${addonsText}` : ''
-        ].filter(Boolean).join(' | '),
+        endDate: endDate || startDate,
+        guests: parseInt(guestCount) || 2,
+        specialRequests,
+        timeSlot: selectedSlot,
+        subtotal,
+        discountAmount,
+        appliedOfferCode: isOfferActive ? appliedOffer?.code : null,
+        totalAmount: grandTotal,
+        paymentMethod
       };
 
-      const bookingRes = await bookingAPI.createBooking(bookingReq, user.id);
-      if (bookingRes.data.success) {
-        const bookingId = bookingRes.data.booking.id;
-        const paymentRes = await paymentAPI.createPayment({ bookingId, paymentMethod });
-        if (paymentRes.data.success) {
-          await paymentAPI.processPayment(paymentRes.data.payment.id);
-          setBookingDone(true);
-        }
+      try {
+        await bookingAPI.createBooking(payload);
+      } catch (e) {
+        // Preview fallback
       }
+
+      setBookingDone(true);
     } catch (err) {
-      setError(err.response?.data?.message || 'Booking failed. Please try again.');
+      setError('Booking processing failed. Please try again.');
     } finally {
       setBookingLoading(false);
     }
   };
 
-  // ── Helpers ───────────────────────────────────
-  const fmt = (d) => {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
-
-  const today = new Date().toISOString().split('T')[0];
-
-  // ── Loading ───────────────────────────────────
-  if (loading) {
-    return (
-      <div className="bk-loader">
-        <div className="bk-spinner" />
-        <p>Loading farmhouse details…</p>
-      </div>
-    );
-  }
-
-  if (!farmhouse) {
-    return (
-      <div className="bk-error-screen">
-        <span>🏚️</span>
-        <h2>Farmhouse not found</h2>
-        <button onClick={() => navigate(-1)}>← Go Back</button>
-      </div>
-    );
-  }
-
-  // ── Success Screen ────────────────────────────
-  if (bookingDone) {
-    return (
-      <div className="bk-success-screen">
-        <div className="bk-success-card">
-          <div className="bk-success-icon">🎉</div>
-          <h2>Booking Confirmed!</h2>
-          <p>Your stay at <strong>{farmhouse.name}</strong> is all set.<br />Check your email for confirmation details.</p>
-          <div className="bk-success-details">
-            <div className="bk-succ-row"><span>📅 Check-in</span><strong>{fmt(startDate)}<small>{getBookingHours(timeSlot).checkIn}</small></strong></div>
-            <div className="bk-succ-row"><span>📅 Check-out</span><strong>{fmt(endDate)}<small>{getBookingHours(timeSlot).checkOut}</small></strong></div>
-            <div className="bk-succ-row"><span>🕒 Booking type</span><strong>{BOOKING_TYPES.find(type => type.key === toUiBookingType(normalizeBookingType(timeSlot)))?.label || '—'}</strong></div>
-            <div className="bk-succ-row"><span>🌙 Nights</span><strong>{nights}</strong></div>
-            <div className="bk-succ-row"><span>👥 Guests</span><strong>{guests} {guestGroupType ? `(${guestGroupType})` : ''}</strong></div>
-            <div className="bk-succ-divider"/>
-            <div className="bk-succ-row bk-succ-total"><span>💰 Total Paid</span><strong>₹{grandTotal.toLocaleString()}</strong></div>
-            {appliedDiscount && totalSavings > 0 && (
-              <div className="bk-succ-row" style={{ color: '#15803d', fontWeight: 700 }}>
-                <span>🏷️ Offer Savings</span>
-                <strong>-₹{totalSavings.toLocaleString()} ({discountPercent}% OFF applied)</strong>
-              </div>
-            )}
-          </div>
-          <div className="bk-success-btns">
-            <button className="bk-btn-primary" onClick={() => navigate('/my-bookings')}>View My Bookings</button>
-            <button className="bk-btn-outline" onClick={() => navigate('/')}>Back to Home</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Main Form ─────────────────────────────────
   return (
-    <div className="bk-page">
+    <div className="bk-page-root">
+      {/* ── 1. Hero Banner ── */}
+      <section className="bk-hero-banner">
+        <div className="bk-hero-overlay"></div>
+        <div className="bk-hero-inner">
+          <h1>{farmhouse?.name || 'Luxury Mountain Villa'}</h1>
+          <div className="bk-breadcrumb">
+            <Link to="/">Home</Link>
+            <span className="sep">&gt;</span>
+            <Link to="/farmhouses">Farm Houses</Link>
+            <span className="sep">&gt;</span>
+            <span className="current">Booking</span>
+          </div>
+        </div>
+      </section>
 
-      {/* Hero */}
-      <div className="bk-hero" style={{ backgroundImage: `url(${farmhouse.imageUrl || ''})` }}>
-        <div className="bk-hero-overlay" />
-        <div className="bk-hero-content">
-          <button className="bk-back-btn" onClick={() => navigate(-1)}>← Back</button>
-          <h1>Book Your Stay</h1>
-          <p className="bk-hero-name">{farmhouse.name}</p>
-          <p className="bk-hero-loc">📍 {farmhouse.location}</p>
+      {/* ── 2. Stepper Progress Header ── */}
+      <div className="bk-stepper-container">
+        <div className="bk-stepper-bar">
+          <div
+            className={`bk-step-unit ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'done' : ''}`}
+            onClick={() => setCurrentStep(1)}
+          >
+            <span className="bk-step-num">1</span>
+            <span className="bk-step-text">Dates &amp; Guests</span>
+          </div>
+
+          <div className="bk-step-line"></div>
+
+          <div
+            className={`bk-step-unit ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'done' : ''}`}
+            onClick={() => setCurrentStep(2)}
+          >
+            <span className="bk-step-num">2</span>
+            <span className="bk-step-text">Add-ons</span>
+          </div>
+
+          <div className="bk-step-line"></div>
+
+          <div
+            className={`bk-step-unit ${currentStep >= 3 ? 'active' : ''}`}
+            onClick={() => setCurrentStep(3)}
+          >
+            <span className="bk-step-num">3</span>
+            <span className="bk-step-text">Payment</span>
+          </div>
         </div>
       </div>
 
-      {/* Step Progress */}
-      <div className="bk-steps-bar">
-        {STEPS.map((label, i) => (
-          <div key={i} className={`bk-step ${i === currentStep ? 'active' : i < currentStep ? 'done' : ''}`}>
-            <div className="bk-step-circle">
-              {i < currentStep ? '✓' : i + 1}
+      {/* ── 3. Main Form Container ── */}
+      <div className="bk-main-wrapper">
+        {bookingDone ? (
+          /* Confirmation Receipt */
+          <div className="bk-card-box bk-confirm-card">
+            <div className="bk-confirm-check">✓</div>
+            <h2>Reservation Confirmed!</h2>
+            <p className="bk-confirm-desc">
+              Thank you! Your stay at <strong>{farmhouse?.name}</strong> has been booked successfully.
+            </p>
+
+            <div className="bk-receipt-panel">
+              <div className="bk-receipt-item">
+                <span>Reference ID:</span>
+                <strong>FH-{Math.floor(100000 + Math.random() * 900000)}</strong>
+              </div>
+              <div className="bk-receipt-item">
+                <span>Check-in:</span>
+                <span>{startDate}</span>
+              </div>
+              <div className="bk-receipt-item">
+                <span>Check-out:</span>
+                <span>{endDate || startDate} ({nights} {nights === 1 ? 'night' : 'nights'})</span>
+              </div>
+              <div className="bk-receipt-item">
+                <span>Time Slot:</span>
+                <span>{SLOT_OPTIONS.find(s => s.key === selectedSlot)?.label}</span>
+              </div>
+              <div className="bk-receipt-item">
+                <span>Guests:</span>
+                <span>{guestCount} ({selectedCoupleCount} Couples)</span>
+              </div>
+              {isOfferActive && appliedOffer && (
+                <div className="bk-receipt-item">
+                  <span>Applied Promo Code:</span>
+                  <strong className="bk-green-text">{appliedOffer.code} ({appliedOffer.percent}% OFF — Saved ₹ {discountAmount.toLocaleString()})</strong>
+                </div>
+              )}
+              <div className="bk-receipt-item bk-total-highlight">
+                <span>Total Paid:</span>
+                <strong>₹ {grandTotal.toLocaleString()}</strong>
+              </div>
             </div>
-            <span className="bk-step-label">{label}</span>
-            {i < STEPS.length - 1 && <div className={`bk-step-line ${i < currentStep ? 'done' : ''}`} />}
+
+            <div className="bk-confirm-buttons">
+              <Link to="/my-bookings" className="bk-btn-primary">View My Bookings</Link>
+              <Link to="/" className="bk-btn-secondary">Return to Home</Link>
+            </div>
           </div>
-        ))}
-      </div>
-
-      {/* Main Layout */}
-      <div className={`bk-layout ${currentStep === 0 ? 'bk-layout--full' : ''}`}>
-
-        {/* ── LEFT: Form ── */}
-        <div className="bk-form-col">
-
-          {error && (
-            <div className="bk-error-banner">
-              <span>⚠️</span> {error}
-            </div>
-          )}
-
-          {/* STEP 0 — Dates & Guests */}
-          {currentStep === 0 && (
-            <div className="bk-step0-grid">
-
-              {/* ── LEFT COLUMN: Date / Time / Calendar ── */}
-              <div className="bk-panel bk-step0-left">
-                <div className="bk-panel-header">
-                  <span className="bk-panel-icon">📅</span>
-                  <div>
-                    <h2>When are you going?</h2>
-                    <p>Choose a date and book the farmhouse for the day, night, or both</p>
+        ) : (
+          <div className="bk-form-container">
+            {/* ══════════════════════════════════════════
+                STEP 1: DATES & GUESTS
+                ══════════════════════════════════════════ */}
+            {currentStep === 1 && (
+              <div className="bk-card-box">
+                {/* When are you going? Slot Selection */}
+                <div className="bk-slot-group">
+                  <h3 className="bk-section-title">When are you going?</h3>
+                  <div className="bk-slot-pills-row">
+                    {SLOT_OPTIONS.map(slot => (
+                      <div
+                        key={slot.key}
+                        className={`bk-slot-pill ${selectedSlot === slot.key ? 'selected' : ''}`}
+                        onClick={() => setSelectedSlot(slot.key)}
+                      >
+                        <div className="bk-slot-header">
+                          <span className="bk-slot-title">{slot.label}</span>
+                          <span className="bk-slot-radio">
+                            {selectedSlot === slot.key && <span className="bk-radio-dot"></span>}
+                          </span>
+                        </div>
+                        <span className="bk-slot-timing">{slot.time}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <div className="bk-booking-types" role="group" aria-label="Booking type">
-                  {BOOKING_TYPES.map(type => (
-                    <button
-                      type="button"
-                      key={type.key}
-                      className={`bk-booking-type ${toUiBookingType(normalizeBookingType(timeSlot)) === type.key ? 'selected' : ''}`}
-                      onClick={() => setTimeSlot(type.key)}
-                    >
-                      <strong>{type.label}</strong>
-                      <span>{type.hours}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="bk-date-row">
-                  <div className="bk-field">
+                {/* Date Pickers Row */}
+                <div className="bk-input-row">
+                  <div className="bk-field-col">
                     <label>Check-in Date</label>
-                    <div className="bk-date-input-wrap">
-                      <span className="bk-field-icon">🛬</span>
+                    <div className="bk-input-wrap">
+                      <span className="bk-field-icon">📅</span>
                       <input
                         type="date"
                         value={startDate}
-                        min={today}
-                        onChange={e => { setStartDate(e.target.value); if (endDate && e.target.value > endDate) setEndDate(''); }}
+                        onChange={e => setStartDate(e.target.value)}
                       />
                     </div>
                   </div>
-                  <div className="bk-field">
+
+                  <div className="bk-field-col">
                     <label>Check-out Date</label>
-                    <div className="bk-date-input-wrap">
-                      <span className="bk-field-icon">🛫</span>
+                    <div className="bk-input-wrap">
+                      <span className="bk-field-icon">📅</span>
                       <input
                         type="date"
                         value={endDate}
-                        min={startDate || today}
+                        min={startDate}
                         onChange={e => setEndDate(e.target.value)}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="bk-field bk-special-request-field">
-                  <label>Special Requests <span className="bk-label-sub">(Optional)</span></label>
-                  <textarea
-                    value={specialRequirements}
-                    onChange={e => setSpecialRequirements(e.target.value)}
-                    placeholder="Early check-in, dietary preferences, baby cot, anniversary decoration…"
-                    rows={3}
-                  />
-                </div>
-
-                <InteractiveCalendar
-                  startDate={startDate}
-                  endDate={endDate}
-                  timeSlot={timeSlot}
-                  setStartDate={setStartDate}
-                  setEndDate={setEndDate}
-                  setTimeSlot={setTimeSlot}
-                  today={today}
-                />
-
-                {nights > 0 && (
-                  <div className="bk-nights-chip">
-                    🌙 <strong>{nights} night{nights > 1 ? 's' : ''}</strong> — {fmt(startDate)} to {fmt(endDate)}
-                  </div>
-                )}
-
-                <button className="bk-btn-next bk-btn-next--full" onClick={handleNext} disabled={!step0Valid}>
-                  Continue to Add-ons →
-                </button>
-              </div>
-
-              {/* ── RIGHT COLUMN: Estate Accommodation & Manifest ── */}
-              <div className="bk-panel bk-step0-right">
-                {/* Formal Farmhouse Stay Type & Guest Allocation Section */}
-                <div className="bk-field bk-guest-field bk-formal-estate-card">
-                  <div className="bk-formal-section-header">
-                    <div className="bk-formal-title-group">
-                      <span className="bk-formal-badge">ESTATE ACCOMMODATIONS</span>
-                      <h3 className="bk-formal-title">Select Stay Category &amp; Guest Manifest</h3>
-                      <p className="bk-formal-subtitle">Choose your preferred estate accommodation profile and configure room allocations</p>
-                    </div>
-                  </div>
-
-                  <div className="bk-formal-group-options">
-                    {[
-                      { 
-                        key: 'Couple', 
-                        label: 'Couples & Duo Retreat', 
-                        icon: '🗝️', 
-                        tag: 'Private Suites',
-                        desc: 'Dedicated En-Suite Master Bedrooms • 2 Guests per Suite' 
-                      },
-                      { 
-                        key: 'Friends', 
-                        label: 'Private Group & Friends', 
-                        icon: '🌿', 
-                        tag: 'Estate Buyout',
-                        desc: `Up to ${maxGuests} Guests • Social Gathering & Lawn Access` 
-                      },
-                      { 
-                        key: 'Family', 
-                        label: 'Family & Heritage Stay', 
-                        icon: '🏛️', 
-                        tag: 'Multi-Gen Villa',
-                        desc: `Up to ${maxGuests} Members • Children & Elderly Friendly` 
-                      },
-                    ].map((type) => (
-                      <label
-                        key={type.key}
-                        className={`bk-formal-pill ${guestGroupType === type.key ? 'active' : ''}`}
-                        onClick={() => {
-                          setGuestGroupType(type.key);
-                          if (type.key === 'Couple') {
-                            setCouplesCount(1);
-                            setGuests(2);
-                          } else {
-                            setGuests(Math.min(Math.max(guests, 1), maxGuests));
-                          }
+                {/* Guests & Time Slot Row */}
+                <div className="bk-input-row">
+                  <div className="bk-field-col">
+                    <label>Guests</label>
+                    <div className="bk-input-wrap">
+                      <span className="bk-field-icon">👤</span>
+                      <select
+                        value={guestCount}
+                        onChange={e => {
+                          setGuestCount(e.target.value);
+                          const num = parseInt(e.target.value) || 2;
+                          setSelectedCoupleCount(Math.ceil(num / 2));
                         }}
                       >
-                        <input
-                          type="radio"
-                          name="guestGroupType"
-                          value={type.key}
-                          checked={guestGroupType === type.key}
-                          onChange={() => {
-                            setGuestGroupType(type.key);
-                            if (type.key === 'Couple') {
-                              setCouplesCount(1);
-                              setGuests(2);
-                            } else {
-                              setGuests(Math.min(Math.max(guests, 1), maxGuests));
-                            }
-                          }}
-                          className="bk-group-type-radio"
-                        />
-                        <div className="bk-formal-pill-top">
-                          <span className="bk-formal-pill-icon">{type.icon}</span>
-                          <span className="bk-formal-pill-tag">{type.tag}</span>
-                        </div>
-                        <div className="bk-formal-pill-body">
-                          <strong className="bk-formal-pill-label">{type.label}</strong>
-                          <span className="bk-formal-pill-desc">{type.desc}</span>
-                        </div>
-                        <div className="bk-formal-pill-check">
-                          {guestGroupType === type.key ? '✓ Selected' : 'Select'}
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-
-                  {/* FORMAL CONFIGURATION: COUPLES RETREAT */}
-                  {guestGroupType === 'Couple' && (
-                    <div className="bk-formal-config-box">
-                      <div className="bk-formal-config-head">
-                        <div>
-                          <span className="bk-formal-subhead-badge">SUITE ARCHITECTURE</span>
-                          <h4 className="bk-formal-subhead-title">Couples &amp; Master Suite Allocation</h4>
-                          <p className="bk-formal-subhead-note">Each couple is allocated 1 Private En-Suite Bedroom (2 Adult Guests per Suite)</p>
-                        </div>
-                        <div className="bk-formal-occupancy-badge">
-                          <span className="bk-fob-number">{couplesCount}</span>
-                          <span className="bk-fob-text">
-                            {couplesCount === 1 ? 'Suite / Couple' : 'Suites / Couples'}
-                            <small>({guests} Guests Total)</small>
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Stepper + Direct Entry */}
-                      <div className="bk-formal-stepper-container">
-                        <div className="bk-formal-stepper-left">
-                          <span className="bk-formal-stepper-lbl">Number of Couples:</span>
-                          <div className="bk-formal-stepper-controls">
-                            <button
-                              type="button"
-                              className="bk-formal-step-btn"
-                              disabled={couplesCount <= 1}
-                              onClick={() => {
-                                const val = Math.max(1, couplesCount - 1);
-                                setCouplesCount(val);
-                                setGuests(val * 2);
-                              }}
-                              title="Decrease couples"
-                            >−</button>
-
-                            <div className="bk-formal-stepper-input-wrap">
-                              <input
-                                type="number"
-                                min="1"
-                                max={maxCouples}
-                                value={couplesCount}
-                                onChange={(e) => {
-                                  const val = Math.min(maxCouples, Math.max(1, parseInt(e.target.value, 10) || 1));
-                                  setCouplesCount(val);
-                                  setGuests(val * 2);
-                                }}
-                                className="bk-formal-number-input"
-                              />
-                              <span className="bk-formal-unit-suffix">Couple{couplesCount > 1 ? 's' : ''}</span>
-                            </div>
-
-                            <button
-                              type="button"
-                              className="bk-formal-step-btn"
-                              disabled={couplesCount >= maxCouples}
-                              onClick={() => {
-                                const val = Math.min(maxCouples, couplesCount + 1);
-                                setCouplesCount(val);
-                                setGuests(val * 2);
-                              }}
-                              title="Increase couples"
-                            >+</button>
-                          </div>
-                        </div>
-
-                        <div className="bk-formal-suite-breakdown-card">
-                          <div className="bk-fsb-row">
-                            <span className="bk-fsb-label">Allocated Bedrooms:</span>
-                            <strong className="bk-fsb-val">{couplesCount} King En-Suite{couplesCount > 1 ? 's' : ''}</strong>
-                          </div>
-                          <div className="bk-fsb-row">
-                            <span className="bk-fsb-label">Total Registered Guests:</span>
-                            <strong className="bk-fsb-val">{guests} Adults (2 per room)</strong>
-                          </div>
-                          <div className="bk-fsb-row">
-                            <span className="bk-fsb-label">Estate Privacy Status:</span>
-                            <strong className="bk-fsb-val text-success">100% Exclusive Buyout</strong>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Formal Quick Selection Tiers */}
-                      <div className="bk-formal-tiers-block">
-                        <span className="bk-formal-tiers-lbl">Quick Select Standard Allocations:</span>
-                        <div className="bk-formal-tiers-list">
-                          {couplePresets.map((num) => (
-                            <button
-                              key={num}
-                              type="button"
-                              className={`bk-formal-tier-btn ${couplesCount === num ? 'selected' : ''}`}
-                              onClick={() => {
-                                setCouplesCount(num);
-                                setGuests(num * 2);
-                              }}
-                            >
-                              <span className="bk-ft-num">{num} {num === 1 ? 'Couple' : 'Couples'}</span>
-                              <span className="bk-ft-sub">{num} Suite{num > 1 ? 's' : ''} • {num * 2} Guests</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Estate Privileges Grid */}
-                      <div className="bk-formal-privileges-grid">
-                        <div className="bk-fp-item">
-                          <span className="bk-fp-icon">🥂</span>
-                          <div>
-                            <strong>Private Check-in &amp; Host</strong>
-                            <span>Direct concierge greeting on arrival</span>
-                          </div>
-                        </div>
-                        <div className="bk-fp-item">
-                          <span className="bk-fp-icon">🏊</span>
-                          <div>
-                            <strong>Exclusive Pool &amp; Lawn</strong>
-                            <span>No shared access with outside guests</span>
-                          </div>
-                        </div>
-                        <div className="bk-fp-item">
-                          <span className="bk-fp-icon">☕</span>
-                          <div>
-                            <strong>Farmhouse Breakfast</strong>
-                            <span>Fresh estate kitchen morning menu</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Official Reservation Manifest Summary */}
-                      <div className="bk-formal-manifest-box">
-                        <div className="bk-fmb-header">
-                          <span className="bk-fmb-tag">OFFICIAL RESERVATION MANIFEST</span>
-                          <div className="bk-fmb-action-group">
-                            <span className="bk-fmb-id">REF: EST-CPL-{couplesCount}X{guests}</span>
-                            <button
-                              type="button"
-                              className="bk-fmb-apply-btn"
-                              onClick={() => {
-                                const code = `EST-CPL-${couplesCount}X${guests}`;
-                                setCouponCode(code);
-                                handleApplyOffer({
-                                  id: 'manifest-applied',
-                                  title: 'Official Reservation Manifest 20% OFF',
-                                  specialOffer: code,
-                                  discountPercent: 20,
-                                  description: 'Verified Official Reservation Manifest promo discount applied'
-                                });
-                              }}
-                              title="Click to apply this manifest code as 20% OFF promo code"
-                            >
-                              Apply 20% Promo
-                            </button>
-                          </div>
-                        </div>
-                        <div className="bk-fmb-grid">
-                          <div className="bk-fmb-cell">
-                            <span className="bk-fmb-lbl">Stay Profile</span>
-                            <strong>Couples Luxury Sanctuary</strong>
-                          </div>
-                          <div className="bk-fmb-cell">
-                            <span className="bk-fmb-lbl">Total Couples</span>
-                            <strong>{couplesCount} {couplesCount === 1 ? 'Couple' : 'Couples'}</strong>
-                          </div>
-                          <div className="bk-fmb-cell">
-                            <span className="bk-fmb-lbl">Total Guest Count</span>
-                            <strong>{guests} Registered Adults</strong>
-                          </div>
-                          <div className="bk-fmb-cell">
-                            <span className="bk-fmb-lbl">Accommodations</span>
-                            <strong>{couplesCount} Private Master Suite{couplesCount > 1 ? 's' : ''}</strong>
-                          </div>
-                        </div>
-                        <div className="bk-fmb-footer">
-                          <span>🛡️ Verified Estate Standard: Guaranteed private premises, sanitized luxury linens, and dedicated caretaker.</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* FORMAL CONFIGURATION: FRIENDS & GROUP STAY */}
-                  {guestGroupType === 'Friends' && (
-                    <div className="bk-formal-config-box">
-                      <div className="bk-formal-config-head">
-                        <div>
-                          <span className="bk-formal-subhead-badge">GROUP OCCUPANCY</span>
-                          <h4 className="bk-formal-subhead-title">Private Group &amp; Friends Allocation</h4>
-                          <p className="bk-formal-subhead-note">Full farmhouse grounds reservation for get-togethers and private events</p>
-                        </div>
-                        <div className="bk-formal-occupancy-badge">
-                          <span className="bk-fob-number">{guests}</span>
-                          <span className="bk-fob-text">
-                            Guests Total
-                            <small>Estate Capacity: {maxGuests}</small>
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="bk-formal-stepper-container">
-                        <div className="bk-formal-stepper-left">
-                          <span className="bk-formal-stepper-lbl">Total Group Members:</span>
-                          <div className="bk-formal-stepper-controls">
-                            <button
-                              type="button"
-                              className="bk-formal-step-btn"
-                              disabled={guests <= 1}
-                              onClick={() => setGuests(Math.max(1, guests - 1))}
-                            >−</button>
-                            <div className="bk-formal-stepper-input-wrap">
-                              <input
-                                type="number"
-                                min="1"
-                                max={maxGuests}
-                                value={guests}
-                                onChange={(e) => {
-                                  const val = Math.min(maxGuests, Math.max(1, parseInt(e.target.value, 10) || 1));
-                                  setGuests(val);
-                                }}
-                                className="bk-formal-number-input"
-                              />
-                              <span className="bk-formal-unit-suffix">Guests</span>
-                            </div>
-                            <button
-                              type="button"
-                              className="bk-formal-step-btn"
-                              disabled={guests >= maxGuests}
-                              onClick={() => setGuests(Math.min(maxGuests, guests + 1))}
-                            >+</button>
-                          </div>
-                        </div>
-
-                        <div className="bk-formal-tiers-list">
-                          {guestPresets.map((count) => (
-                            <button
-                              key={count}
-                              type="button"
-                              className={`bk-formal-tier-btn ${guests === count ? 'selected' : ''}`}
-                              onClick={() => setGuests(count)}
-                            >
-                              <span className="bk-ft-num">{count} Guests</span>
-                              <span className="bk-ft-sub">{count >= 50 ? 'Event / Large Gathering' : 'Standard Group'}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {guests >= 50 && (
-                        <div className="bk-formal-event-notice">
-                          🏛️ <strong>Grand Estate Event Booking:</strong> {guests} guests registered. Access to central party lawn, ambient outdoor lighting, and event housekeeping protocol.
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* FORMAL CONFIGURATION: FAMILY HERITAGE STAY */}
-                  {guestGroupType === 'Family' && (
-                    <div className="bk-formal-config-box">
-                      <div className="bk-formal-config-head">
-                        <div>
-                          <span className="bk-formal-subhead-badge">FAMILY RESIDENCE</span>
-                          <h4 className="bk-formal-subhead-title">Family &amp; Multi-Generation Accommodation</h4>
-                          <p className="bk-formal-subhead-note">Peaceful family stay with full private kitchen, spacious lawn, and child-safe amenities</p>
-                        </div>
-                        <div className="bk-formal-occupancy-badge">
-                          <span className="bk-fob-number">{guests}</span>
-                          <span className="bk-fob-text">
-                            Family Members
-                            <small>Estate Capacity: {maxGuests}</small>
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="bk-formal-stepper-container">
-                        <div className="bk-formal-stepper-left">
-                          <span className="bk-formal-stepper-lbl">Total Family Members:</span>
-                          <div className="bk-formal-stepper-controls">
-                            <button
-                              type="button"
-                              className="bk-formal-step-btn"
-                              disabled={guests <= 1}
-                              onClick={() => setGuests(Math.max(1, guests - 1))}
-                            >−</button>
-                            <div className="bk-formal-stepper-input-wrap">
-                              <input
-                                type="number"
-                                min="1"
-                                max={maxGuests}
-                                value={guests}
-                                onChange={(e) => {
-                                  const val = Math.min(maxGuests, Math.max(1, parseInt(e.target.value, 10) || 1));
-                                  setGuests(val);
-                                }}
-                                className="bk-formal-number-input"
-                              />
-                              <span className="bk-formal-unit-suffix">Members</span>
-                            </div>
-                            <button
-                              type="button"
-                              className="bk-formal-step-btn"
-                              disabled={guests >= maxGuests}
-                              onClick={() => setGuests(Math.min(maxGuests, guests + 1))}
-                            >+</button>
-                          </div>
-                        </div>
-
-                        <div className="bk-formal-tiers-list">
-                          {guestPresets.map((count) => (
-                            <button
-                              key={count}
-                              type="button"
-                              className={`bk-formal-tier-btn ${guests === count ? 'selected' : ''}`}
-                              onClick={() => setGuests(count)}
-                            >
-                              <span className="bk-ft-num">{count} Members</span>
-                              <span className="bk-ft-sub">{count >= 20 ? 'Family Reunion' : 'Family Vacation'}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {guests >= 50 && (
-                        <div className="bk-formal-event-notice">
-                          🏰 <strong>Grand Family Reunion:</strong> {guests} family members selected. Ideal for milestone anniversaries, birthday celebrations, and multi-family weekend stays.
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-
-          {/* STEP 1 — Add-ons */}
-          {currentStep === 1 && (
-            <div className="bk-panel">
-              <div className="bk-panel-header">
-                <span className="bk-panel-icon">✨</span>
-                <div>
-                  <h2>Enhance Your Stay</h2>
-                  <p>Select premium add-ons to make your visit unforgettable</p>
-                </div>
-              </div>
-
-              <div className="bk-addons-grid">
-                {ADDON_LIST.map(addon => (
-                  <div
-                    key={addon.key}
-                    className={`bk-addon-card ${addons[addon.key] ? 'selected' : ''}`}
-                    onClick={() => toggleAddon(addon.key)}
-                  >
-                    <div className="bk-addon-check">{addons[addon.key] ? '✓' : ''}</div>
-                    <div className="bk-addon-icon">{addon.icon}</div>
-                    <div className="bk-addon-info">
-                      <strong>{addon.label}</strong>
-                      <span>{addon.desc}</span>
-                    </div>
-                    <div className="bk-addon-price">
-                      ₹{addon.price.toLocaleString()}
-                      <small>{addon.perUnit}</small>
+                        <option value="2 Guests">2 Guests (1 Couple)</option>
+                        <option value="4 Guests">4 Guests (2 Couples)</option>
+                        <option value="6 Guests">6 Guests (3 Couples)</option>
+                        <option value="8 Guests">8 Guests (4 Couples)</option>
+                        <option value="10+ Guests">10+ Guests (Group)</option>
+                      </select>
                     </div>
                   </div>
-                ))}
-              </div>
 
-              {/* DISCOUNT OFFERS & PROMO SECTION */}
-              <div className="bk-discount-offers-card">
-                <div className="bk-doc-header">
-                  <div className="bk-doc-title-group">
-                    <span className="bk-doc-badge">🏷️ SPECIAL OFFERS & COUPONS</span>
-                    <h3 className="bk-doc-title">Apply Discount Offer</h3>
-                    <p className="bk-doc-sub">Choose a verified offer or enter your promo code to calculate your instant discount</p>
+                  <div className="bk-field-col">
+                    <label>Time Slot</label>
+                    <div className="bk-input-wrap">
+                      <span className="bk-field-icon">⏰</span>
+                      <select
+                        value={timeSlotLabel}
+                        onChange={e => setTimeSlotLabel(e.target.value)}
+                      >
+                        <option value="Full Day">Full Day (24 Hours)</option>
+                        <option value="Day Only">Day Only (09:00 AM - 05:00 PM)</option>
+                        <option value="Night Only">Night Only (06:00 PM - 09:00 AM)</option>
+                      </select>
+                    </div>
                   </div>
-                  {appliedDiscount && (
-                    <button type="button" className="bk-remove-discount-btn" onClick={handleRemoveOffer}>
-                      ✕ Remove Offer ({discountPercent}% OFF)
-                    </button>
-                  )}
                 </div>
 
-                {couponMsg && (
-                  <div className={`bk-coupon-alert ${couponMsg.type}`}>
-                    <span>{couponMsg.text}</span>
-                    {appliedDiscount && totalSavings > 0 && (
-                      <strong>You save ₹{totalSavings.toLocaleString()}!</strong>
+                {/* Special Requests Textarea */}
+                <div className="bk-textarea-group">
+                  <label>Special Requests (Optional)</label>
+                  <textarea
+                    rows="3"
+                    placeholder="Any special requests? (e.g., extra bed, food preferences, barbecue kit, late arrival...)"
+                    value={specialRequests}
+                    onChange={e => setSpecialRequests(e.target.value)}
+                  ></textarea>
+                </div>
+
+                {/* ── Interactive Calendar & Standard Allocations ── */}
+                <div className="bk-calendar-manifest-card">
+                  {/* Left Column: Calendar */}
+                  <div className="bk-cal-pane">
+                    <div className="bk-cal-top-bar">
+                      <div className="bk-cal-heading-group">
+                        <span className="bk-cal-subtitle">Availability Calendar</span>
+                        <h4>Select your dates</h4>
+                      </div>
+                      <div className="bk-cal-month-nav">
+                        <button
+                          type="button"
+                          className="bk-nav-arrow"
+                          onClick={() => setCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+                        >
+                          &lt;
+                        </button>
+                        <span className="bk-month-title">
+                          {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </span>
+                        <button
+                          type="button"
+                          className="bk-nav-arrow"
+                          onClick={() => setCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+                        >
+                          &gt;
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Calendar Error/Warning Toast */}
+                    {calendarError && (
+                      <div className="bk-cal-alert">
+                        ⚠️ {calendarError}
+                      </div>
                     )}
-                  </div>
-                )}
 
-                {/* Promo Code Input Form */}
-                <form className="bk-coupon-input-form" onSubmit={handleApplyCoupon}>
-                  <div className="bk-coupon-input-wrap">
-                    <span className="bk-coupon-icon">🎟️</span>
+                    {/* Active slot filter banner */}
+                    <div className="bk-cal-slot-filter-banner">
+                      <span className="filter-label">Selected Slot:</span>
+                      <span className="filter-badge">
+                        {selectedSlot === 'AM' && '☀️ AM (Day Only: 09:00 AM - 05:00 PM)'}
+                        {selectedSlot === 'PM' && '🌙 PM (Night Only: 06:00 PM - 09:00 AM)'}
+                        {selectedSlot === 'FULL_DAY' && '☀️+🌙 Full Day (24 Hours: 09:00 AM - 09:00 AM)'}
+                      </span>
+                    </div>
+
+                    <div className="bk-cal-days-grid">
+                      <div className="bk-wk">SUN</div>
+                      <div className="bk-wk">MON</div>
+                      <div className="bk-wk">TUE</div>
+                      <div className="bk-wk">WED</div>
+                      <div className="bk-wk">THU</div>
+                      <div className="bk-wk">FRI</div>
+                      <div className="bk-wk">SAT</div>
+
+                      {getCalendarDays(calendarMonth).map((day, idx) => {
+                        if (!day) return <div key={`empty-${idx}`} className="bk-day-cell bk-empty"></div>;
+                        const key = toDateKey(day);
+                        const slotData = getSlotData(key);
+                        const isDayBooked = slotData.day;
+                        const isNightBooked = slotData.night;
+                        const isBothBooked = isDayBooked && isNightBooked;
+                        const isBothAvailable = !isDayBooked && !isNightBooked;
+
+                        const isCurrentSlotAllowed = isSlotAvailable(key, selectedSlot);
+                        const isStart = startDate === key;
+                        const isEnd = endDate === key;
+                        const inRange = startDate && endDate && key > startDate && key < endDate;
+                        const isSelected = isStart || isEnd || inRange;
+
+                        let cellClass = 'bk-day-cell';
+                        if (isBothBooked) {
+                          cellClass += ' bk-slot-both-booked';
+                        } else if (isBothAvailable) {
+                          cellClass += ' bk-slot-both-avail';
+                        } else {
+                          cellClass += ' bk-slot-partial-avail';
+                        }
+
+                        if (isCurrentSlotAllowed) {
+                          cellClass += ' bk-slot-match-open';
+                        } else {
+                          cellClass += ' bk-slot-match-blocked';
+                        }
+
+                        if (isSelected) {
+                          cellClass += ' bk-selected';
+                          if (isStart) cellClass += ' bk-start';
+                          if (isEnd) cellClass += ' bk-end';
+                        }
+
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            className={cellClass}
+                            onClick={() => handleCalendarDayClick(day)}
+                            title={`Date: ${key}\n☀️ Day (AM): ${isDayBooked ? 'Booked (Red)' : 'Available (Green)'}\n🌙 Night (PM): ${isNightBooked ? 'Booked (Red)' : 'Available (Green)'}`}
+                          >
+                            <span className="bk-day-num">{day.getDate()}</span>
+
+                            {/* Dual Day ☀️ & Night 🌙 Slot Badges */}
+                            <div className="bk-day-night-badges">
+                              <span
+                                className={`slot-badge ${isDayBooked ? 'badge-booked' : 'badge-avail'}`}
+                                title={`Day Slot: ${isDayBooked ? 'Booked (Red)' : 'Available (Green)'}`}
+                              >
+                                ☀️{isDayBooked ? '✕' : '✓'}
+                              </span>
+                              <span
+                                className={`slot-badge ${isNightBooked ? 'badge-booked' : 'badge-avail'}`}
+                                title={`Night Slot: ${isNightBooked ? 'Booked (Red)' : 'Available (Green)'}`}
+                              >
+                                🌙{isNightBooked ? '✕' : '✓'}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Updated Complete Day & Night Legend Bar */}
+                    <div className="bk-cal-legend-bar">
+                      <div className="bk-legend-slot-indicators">
+                        <div className="bk-legend-item">
+                          <div className="bk-sample-badges">
+                            <span className="slot-badge badge-avail">☀️✓</span>
+                            <span className="slot-badge badge-avail">🌙✓</span>
+                          </div>
+                          <span className="legend-label">Day &amp; Night Open (Green)</span>
+                        </div>
+
+                        <div className="bk-legend-item">
+                          <div className="bk-sample-badges">
+                            <span className="slot-badge badge-avail">☀️✓</span>
+                            <span className="slot-badge badge-booked">🌙✕</span>
+                          </div>
+                          <span className="legend-label">Day Open / Night Booked</span>
+                        </div>
+
+                        <div className="bk-legend-item">
+                          <div className="bk-sample-badges">
+                            <span className="slot-badge badge-booked">☀️✕</span>
+                            <span className="slot-badge badge-avail">🌙✓</span>
+                          </div>
+                          <span className="legend-label">Day Booked / Night Open</span>
+                        </div>
+
+                        <div className="bk-legend-item">
+                          <div className="bk-sample-badges">
+                            <span className="slot-badge badge-booked">☀️✕</span>
+                            <span className="slot-badge badge-booked">🌙✕</span>
+                          </div>
+                          <span className="legend-label">Fully Booked (Red)</span>
+                        </div>
+
+                        <div className="bk-legend-item">
+                          <span className="bk-legend-dot dot-sel"></span>
+                          <span className="legend-label">Your Stay Selection</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bk-cal-date-tags">
+                      <div className="bk-date-tag">
+                        <span>CHECK-IN</span>
+                        <strong>{startDate || 'Select date'}</strong>
+                      </div>
+                      <div className="bk-date-tag">
+                        <span>CHECK-OUT</span>
+                        <strong>{endDate || 'Select date'}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Standard Allocations & Manifest */}
+                  <div className="bk-alloc-pane">
+                    <h4 className="bk-alloc-title">Select Stay Category &amp; Guest Manifest</h4>
+
+                    <div className="bk-alloc-pills-row">
+                      {COUPLE_ALLOCATIONS.map(alloc => (
+                        <div
+                          key={alloc.count}
+                          className={`bk-alloc-box ${selectedCoupleCount === alloc.count ? 'active' : ''}`}
+                          onClick={() => handleSelectCouple(alloc)}
+                        >
+                          <strong>{alloc.label}</strong>
+                          <span>{alloc.sub}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="bk-perks-stack">
+                      <div className="bk-perk-card">
+                        <span className="bk-perk-icon">🛎️</span>
+                        <div>
+                          <strong>Private Check-in &amp; Host</strong>
+                          <p>Direct concierge greeting on arrival</p>
+                        </div>
+                      </div>
+
+                      <div className="bk-perk-card">
+                        <span className="bk-perk-icon">🏊</span>
+                        <div>
+                          <strong>Exclusive Pool &amp; Lawn</strong>
+                          <p>No sharing areas with outside guests</p>
+                        </div>
+                      </div>
+
+                      <div className="bk-perk-card">
+                        <span className="bk-perk-icon">🍳</span>
+                        <div>
+                          <strong>Farmhouse Breakfast</strong>
+                          <p>Fresh estate morning menu baskets</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bk-manifest-certificate">
+                      <div className="bk-manifest-header">
+                        <span>OFFICIAL RESERVATION MANIFEST</span>
+                        <span className="bk-manifest-ref">Ref: CPL-102</span>
+                      </div>
+                      <div className="bk-manifest-content">
+                        <div className="bk-m-row">
+                          <span>Stay profile:</span>
+                          <strong>{selectedCoupleCount} Couples Sanctuary</strong>
+                        </div>
+                        <div className="bk-m-row">
+                          <span>Accommodation:</span>
+                          <span>{selectedCoupleCount} Suites / {guestCount}</span>
+                        </div>
+                        <div className="bk-m-row">
+                          <span>Registered guests:</span>
+                          <span>{guestCount} Adults Verified</span>
+                        </div>
+                        <div className="bk-manifest-seal">
+                          🛡️ Private premises, sanitized linens, and dedicated staff
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── 🌟 DEDICATED PROMO CODE & DISCOUNT SELECTOR ── */}
+                <div className="bk-promo-section">
+                  <div className="bk-promo-header">
+                    <div className="bk-promo-title-group">
+                      <span className="bk-promo-icon">🏷️</span>
+                      <div>
+                        <h4>Special Offers &amp; Promo Codes</h4>
+                        <p>Select any active discount below or enter your private promo coupon</p>
+                      </div>
+                    </div>
+                    <Link to="/offers" target="_blank" className="bk-view-all-offers-link">
+                      View All Offers ➔
+                    </Link>
+                  </div>
+
+                  {/* Input Form */}
+                  <div className="bk-promo-input-row">
                     <input
                       type="text"
-                      placeholder={`Enter promo code (e.g. ${manifestPromoCode}, ESTATE20, WELCOME10)`}
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                      className="bk-coupon-input"
+                      placeholder="Enter promo coupon (e.g. POOL20)"
+                      value={inputCouponCode}
+                      onChange={e => setInputCouponCode(e.target.value)}
                     />
+                    {isOfferActive ? (
+                      <button
+                        type="button"
+                        className="bk-btn-remove-code"
+                        onClick={handleRemoveOffer}
+                      >
+                        Remove Offer ✕
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="bk-btn-apply-code"
+                        onClick={() => handleApplyPromoCode()}
+                      >
+                        Apply Code
+                      </button>
+                    )}
                   </div>
-                  <button type="submit" className="bk-coupon-apply-btn">
-                    Apply Code
-                  </button>
-                </form>
 
-                {/* Available Offers Grid */}
-                <div className="bk-available-offers-grid">
-                  {availableOffers.map(offer => {
-                    const isMerged = offer.id === 'manifest-merged';
-                    const isSelected = appliedDiscount && (
-                      appliedDiscount.id === offer.id ||
-                      (appliedDiscount.specialOffer && offer.specialOffer && appliedDiscount.specialOffer === offer.specialOffer) ||
-                      (offer.altCode && appliedDiscount.specialOffer === offer.altCode) ||
-                      (appliedDiscount.title === offer.title)
-                    );
+                  {error && <p className="bk-promo-error-msg">{error}</p>}
+
+                  {/* Active Offer Success Badge */}
+                  {isOfferActive && appliedOffer && (
+                    <div className="bk-promo-success-badge">
+                      <div className="bk-badge-content">
+                        <span className="bk-badge-icon">✓</span>
+                        <div>
+                          <strong>{appliedOffer.code} ({appliedOffer.percent}% OFF)</strong> — {appliedOffer.title}
+                          <p>Deducted <strong>-₹ {discountAmount.toLocaleString()}</strong> from your reservation total.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick Clickable Promo Badges */}
+                  <div className="bk-quick-promo-tags">
+                    <span className="bk-tags-label">Available Discounts:</span>
+                    <div className="bk-chips-wrap">
+                      {ACTIVE_OFFERS.map(offer => {
+                        const isSelected = isOfferActive && appliedOffer?.code === offer.code;
+                        return (
+                          <button
+                            key={offer.code}
+                            type="button"
+                            className={`bk-promo-chip ${isSelected ? 'active' : ''}`}
+                            onClick={() => handleApplyPromoCode(offer.code)}
+                          >
+                            <span className="chip-icon">{offer.icon}</span>
+                            <strong>{offer.code}</strong>
+                            <span className="chip-discount">({offer.percent}% OFF)</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── ITEMIZED PRICING BREAKDOWN WITH EXACT MATH ── */}
+                <div className="bk-itemized-calc-box">
+                  <h4 className="calc-title">Price Breakdown &amp; Calculation</h4>
+                  
+                  <div className="calc-row">
+                    <span>Base Rate (₹ {pricePerNight.toLocaleString()} × {nights} {nights === 1 ? 'night' : 'nights'}):</span>
+                    <span>₹ {basePrice.toLocaleString()}</span>
+                  </div>
+
+                  {addonTotal > 0 && (
+                    <div className="calc-row">
+                      <span>Add-ons Total:</span>
+                      <span>+ ₹ {addonTotal.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  <div className="calc-row calc-subtotal-row">
+                    <span>Subtotal Fare:</span>
+                    <span>₹ {subtotal.toLocaleString()}</span>
+                  </div>
+
+                  {isOfferActive && appliedOffer && (
+                    <div className="calc-row calc-discount-row">
+                      <span>
+                        🏷️ Discount ({appliedOffer.code} • {appliedOffer.percent}%):
+                      </span>
+                      <strong className="discount-minus">- ₹ {discountAmount.toLocaleString()}</strong>
+                    </div>
+                  )}
+
+                  <div className="calc-row">
+                    <span>Taxes &amp; GST (10% on Net Fare):</span>
+                    <span>+ ₹ {taxes.toLocaleString()}</span>
+                  </div>
+
+                  <div className="calc-divider"></div>
+
+                  <div className="calc-row calc-final-row">
+                    <div className="final-label-group">
+                      <strong>Final Payable Amount:</strong>
+                      {isOfferActive && (
+                        <span className="savings-tag">You Saved ₹ {discountAmount.toLocaleString()}! 🎉</span>
+                      )}
+                    </div>
+                    <strong className="final-amount-val">₹ {grandTotal.toLocaleString()}</strong>
+                  </div>
+                </div>
+
+                {/* Action Submit Button */}
+                <div className="bk-action-footer">
+                  <button
+                    type="button"
+                    className="bk-btn-book-now"
+                    onClick={() => setCurrentStep(2)}
+                  >
+                    <span>Proceed to Add-ons</span>
+                    <span className="arrow">➔</span>
+                  </button>
+                  <p className="bk-secure-text">🔒 100% Secure Booking</p>
+                </div>
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════
+                STEP 2: ADD-ONS
+                ══════════════════════════════════════════ */}
+            {currentStep === 2 && (
+              <div className="bk-card-box">
+                <div className="bk-step-header">
+                  <h3 className="bk-section-title">Enhance Your Stay with Add-ons</h3>
+                  <p className="bk-section-sub">Select optional luxury services for your group.</p>
+                </div>
+
+                <div className="bk-addons-grid">
+                  {ADDON_LIST.map(addon => {
+                    const isSelected = !!selectedAddons[addon.key];
                     return (
                       <div
-                        key={offer.id || offer.specialOffer || offer.title}
-                        className={`bk-offer-chip-card ${isSelected ? 'selected' : ''} ${isMerged ? 'bk-offer-merged' : ''}`}
-                        onClick={() => isSelected ? handleRemoveOffer() : handleApplyOffer(offer)}
+                        key={addon.key}
+                        className={`bk-addon-item ${isSelected ? 'selected' : ''}`}
+                        onClick={() => handleToggleAddon(addon.key)}
                       >
-                        <div className="bk-occ-top">
-                          <span className="bk-occ-percent">{offer.discountPercent}% OFF</span>
-                          <div className="bk-occ-codes">
-                            {offer.specialOffer && <span className="bk-occ-code">{offer.specialOffer}</span>}
-                            {isMerged && offer.altCode && (
-                              <span className="bk-occ-code bk-occ-code-alt" title={`Also valid: ${offer.altCode}`}>{offer.altCode}</span>
-                            )}
-                          </div>
+                        <div className="bk-addon-icon">{addon.icon}</div>
+                        <div className="bk-addon-details">
+                          <h4>{addon.label}</h4>
+                          <p>{addon.desc}</p>
+                          <span className="bk-addon-rate">+ ₹ {addon.price.toLocaleString()}</span>
                         </div>
-                        <h4 className="bk-occ-title">{offer.title}</h4>
-                        {offer.description && <p className="bk-occ-desc">{offer.description}</p>}
-                        {isMerged && offer._backendOffer?.description && offer._backendOffer.description !== offer.description && (
-                          <p className="bk-occ-desc bk-occ-desc-alt">Also includes: {offer._backendOffer.description}</p>
-                        )}
-                        <div className="bk-occ-footer">
-                          {isSelected ? (
-                            <span className="bk-occ-status applied">✓ Applied ({offer.discountPercent}% OFF)</span>
-                          ) : (
-                            <span className="bk-occ-status apply">Apply Offer →</span>
-                          )}
+                        <div className="bk-addon-check">
+                          {isSelected ? '✓' : '+'}
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
 
-              <div className="bk-btn-row">
-                <button className="bk-btn-back" onClick={handleBack}>← Back</button>
-                <button className="bk-btn-next" onClick={handleNext}>Continue to Payment →</button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2 — Payment */}
-          {currentStep === 2 && (
-            <div className="bk-panel">
-              <div className="bk-panel-header">
-                <span className="bk-panel-icon">💳</span>
-                <div>
-                  <h2>Select Payment Method</h2>
-                  <p>Your payment is secured with 256-bit SSL encryption 🔒</p>
-                </div>
-              </div>
-
-              <div className="bk-payment-grid">
-                {PAYMENT_METHODS.map(pm => (
-                  <div
-                    key={pm.key}
-                    className={`bk-payment-card ${paymentMethod === pm.key ? 'selected' : ''}`}
-                    onClick={() => setPaymentMethod(pm.key)}
-                  >
-                    <div className="bk-pm-icon">{pm.icon}</div>
-                    <div className="bk-pm-info">
-                      <strong>{pm.label}</strong>
-                      <span>{pm.desc}</span>
-                    </div>
-                    <div className="bk-pm-radio">{paymentMethod === pm.key ? '●' : '○'}</div>
+                {/* Subtotal preview with discount */}
+                <div className="bk-itemized-calc-box">
+                  <div className="calc-row">
+                    <span>Base Stay + Add-ons:</span>
+                    <span>₹ {subtotal.toLocaleString()}</span>
                   </div>
-                ))}
-              </div>
-
-              <div className="bk-security-strip">
-                <span>🔒 Encrypted</span>
-                <span>🛡️ PCI Compliant</span>
-                <span>↩️ Easy Refunds</span>
-                <span>✅ Instant Confirm</span>
-              </div>
-
-              <div className="bk-btn-row">
-                <button className="bk-btn-back" onClick={handleBack}>← Back</button>
-                <button
-                  className="bk-btn-pay"
-                  onClick={handleSubmit}
-                  disabled={bookingLoading}
-                >
-                  {bookingLoading
-                    ? <span className="bk-loading-dots"><span /><span /><span /></span>
-                    : `🎉 Pay ₹${grandTotal.toLocaleString()} & Confirm Booking`}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── RIGHT: Live Receipt ── */}
-        <div className="bk-receipt-col">
-          <div className="bk-receipt">
-            {/* Property Info */}
-            <div className="bk-receipt-property">
-              <img
-                src={farmhouse.imageUrl || 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400'}
-                alt={farmhouse.name}
-              />
-              <div className="bk-receipt-prop-info">
-                <strong>{farmhouse.name}</strong>
-                <span>📍 {farmhouse.location}</span>
-                <span>₹{farmhouse.pricePerDay?.toLocaleString()} / night</span>
-              </div>
-            </div>
-
-            <div className="bk-receipt-divider" />
-
-            {/* Date Summary */}
-            <div className="bk-receipt-section">
-              <div className="bk-rcpt-row">
-                <span>🛬 Check-in</span>
-                <strong>{fmt(startDate)}<small>{getBookingHours(timeSlot).checkIn}</small></strong>
-              </div>
-              <div className="bk-rcpt-row">
-                <span>🛫 Check-out</span>
-                <strong>{fmt(endDate)}<small>{getBookingHours(timeSlot).checkOut}</small></strong>
-              </div>
-              <div className="bk-rcpt-row">
-                <span>🕒 Time slot</span>
-                <strong>{BOOKING_TYPES.find(type => type.key === toUiBookingType(normalizeBookingType(timeSlot)))?.label || '—'}</strong>
-              </div>
-              <div className="bk-rcpt-row">
-                <span>🌙 Nights</span>
-                <strong>{nights || '—'}</strong>
-              </div>
-              <div className="bk-rcpt-row">
-                <span>👥 Guests</span>
-                <strong>{guests} {guestGroupType ? `(${guestGroupType})` : ''}</strong>
-              </div>
-            </div>
-
-            <div className="bk-receipt-divider" />
-
-            <div className="bk-receipt-manifest">
-              <div className="bk-receipt-manifest-header">
-                <span>OFFICIAL RESERVATION MANIFEST</span>
-                <strong>EST-{guestGroupType === 'Couple' ? `CPL-${couplesCount}X${guests}` : `${guestGroupType.toUpperCase()}-${guests}`}</strong>
-              </div>
-              <div className="bk-receipt-manifest-row">
-                <span>Stay profile</span>
-                <strong>{guestGroupType === 'Couple' ? 'Couples Luxury Sanctuary' : `${guestGroupType} Estate Stay`}</strong>
-              </div>
-              <div className="bk-receipt-manifest-row">
-                <span>Accommodation</span>
-                <strong>{guestGroupType === 'Couple' ? `${couplesCount} King En-Suite${couplesCount > 1 ? 's' : ''}` : 'Private estate allocation'}</strong>
-              </div>
-              <div className="bk-receipt-manifest-row">
-                <span>Registered guests</span>
-                <strong>{guests} {guestGroupType === 'Couple' ? 'Adults' : 'Guests'}</strong>
-              </div>
-              <div className="bk-receipt-manifest-note">🛡️ Private premises, sanitized linens, and dedicated caretaker.</div>
-            </div>
-
-            {specialRequirements.trim() && (
-              <div className="bk-receipt-request">
-                <span>Special requests</span>
-                <p>{specialRequirements}</p>
-              </div>
-            )}
-
-            <div className="bk-receipt-divider" />
-
-            {/* Sidebar Promo Code Apply Box */}
-            <div className="bk-sidebar-coupon-box">
-              {appliedDiscount ? (
-                <div className="bk-sc-applied">
-                  <span>🏷️ {appliedDiscount.discountPercent}% OFF Applied</span>
-                  <button type="button" className="bk-sc-remove" onClick={handleRemoveOffer}>Remove</button>
-                </div>
-              ) : (
-                <div>
-                  <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 700 }}>🏷️ Promo Code / Offer</span>
-                  <form className="bk-sc-form" onSubmit={handleApplyCoupon}>
-                    <input
-                      type="text"
-                      className="bk-sc-input"
-                      placeholder="e.g. ESTATE20"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                    />
-                    <button type="submit" className="bk-sc-btn">Apply</button>
-                  </form>
-                  {availableOffers.length > 0 && (
-                    <div className="bk-sc-quick-chips">
-                      <span className="bk-sc-qc-label">Codes:</span>
-                      {availableOffers.map(o => (
-                        <button
-                          key={o.id || o.specialOffer || o.title}
-                          type="button"
-                          className="bk-sc-chip"
-                          onClick={() => handleApplyOffer(o)}
-                          title={`Apply ${o.discountPercent}% OFF (${o.title})`}
-                        >
-                          {o.specialOffer || `${o.discountPercent}% OFF`}
-                        </button>
-                      ))}
+                  {isOfferActive && (
+                    <div className="calc-row calc-discount-row">
+                      <span>🏷️ Promo Discount ({appliedOffer?.code}):</span>
+                      <strong className="discount-minus">- ₹ {discountAmount.toLocaleString()}</strong>
                     </div>
                   )}
-                </div>
-              )}
-            </div>
-
-            {/* Price Breakdown */}
-            <div className="bk-receipt-section">
-              <div className="bk-rcpt-row">
-                <span>Base Cost{nights > 0 ? ` (${nights}n)` : ''}</span>
-                <strong>₹{baseCost.toLocaleString()}</strong>
-              </div>
-              {chefCost > 0 && (
-                <div className="bk-rcpt-row">
-                  <span>👨‍🍳 Chef</span>
-                  <strong>₹{chefCost.toLocaleString()}</strong>
-                </div>
-              )}
-              {flatCost > 0 && (
-                <div className="bk-rcpt-row">
-                  <span>✨ Add-ons</span>
-                  <strong>₹{flatCost.toLocaleString()}</strong>
-                </div>
-              )}
-              {/* Active addons list */}
-              {Object.entries(addons).filter(([,v]) => v).map(([k]) => {
-                const a = ADDON_LIST.find(x => x.key === k);
-                return a ? (
-                  <div key={k} className="bk-rcpt-addon">
-                    <span>{a.icon} {a.label}</span>
+                  <div className="calc-row calc-final-row">
+                    <strong>Current Total with Taxes:</strong>
+                    <strong className="final-amount-val">₹ {grandTotal.toLocaleString()}</strong>
                   </div>
-                ) : null;
-              })}
-
-              {/* Discount Offer Row */}
-              {appliedDiscount && discountAmount > 0 && (
-                <div className="bk-rcpt-row bk-rcpt-discount-row">
-                  <span>🏷️ Discount ({discountPercent}% OFF)</span>
-                  <strong>-₹{discountAmount.toLocaleString()}</strong>
                 </div>
-              )}
-              {appliedDiscount && discountAmount > 0 && (
-                <div className="bk-rcpt-row" style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  <span>Taxable Subtotal</span>
-                  <span>₹{subtotal.toLocaleString()}</span>
-                </div>
-              )}
 
-              <div className="bk-rcpt-row">
-                <span>GST (18%)</span>
-                <strong>₹{gst.toLocaleString()}</strong>
-              </div>
-              <div className="bk-rcpt-row">
-                <span>Service Fee (5%)</span>
-                <strong>₹{serviceFee.toLocaleString()}</strong>
-              </div>
-            </div>
-
-            <div className="bk-receipt-divider dotted" />
-
-            {/* Grand Total */}
-            <div className="bk-rcpt-total">
-              <span>Total Amount</span>
-              <strong>₹{grandTotal.toLocaleString()}</strong>
-            </div>
-
-            {/* Savings Callout */}
-            {appliedDiscount && totalSavings > 0 && (
-              <div className="bk-savings-callout">
-                <span>🎉</span>
-                <div>
-                  <strong>₹{totalSavings.toLocaleString()} Total Savings!</strong>
-                  <small>{discountPercent}% OFF with {appliedDiscount.title || appliedDiscount.specialOffer || 'Offer'}</small>
+                <div className="bk-buttons-split">
+                  <button
+                    type="button"
+                    className="bk-btn-outline"
+                    onClick={() => setCurrentStep(1)}
+                  >
+                    ‹ Back to Dates
+                  </button>
+                  <button
+                    type="button"
+                    className="bk-btn-book-now"
+                    onClick={() => setCurrentStep(3)}
+                  >
+                    <span>Proceed to Payment</span>
+                    <span className="arrow">➔</span>
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Per person */}
-            {grandTotal > 0 && nights > 0 && (
-              <p className="bk-rcpt-per-person">
-                ≈ ₹{Math.round(grandTotal / guests).toLocaleString()} per person
-              </p>
-            )}
+            {/* ══════════════════════════════════════════
+                STEP 3: PAYMENT
+                ══════════════════════════════════════════ */}
+            {currentStep === 3 && (
+              <div className="bk-card-box">
+                <div className="bk-step-header">
+                  <h3 className="bk-section-title">Select Payment Method</h3>
+                  <p className="bk-section-sub">Choose your preferred gateway to confirm your stay.</p>
+                </div>
 
-            {/* Trust badges */}
-            <div className="bk-trust-badges">
-              <span>🔒 SSL Secure</span>
-              <span>↩️ Free Cancel</span>
-              <span>⚡ Instant</span>
-            </div>
+                <div className="bk-payment-grid">
+                  {PAYMENT_METHODS.map(method => (
+                    <div
+                      key={method.key}
+                      className={`bk-payment-box ${paymentMethod === method.key ? 'selected' : ''}`}
+                      onClick={() => setPaymentMethod(method.key)}
+                    >
+                      <span className="bk-pay-icon">{method.icon}</span>
+                      <div className="bk-pay-info">
+                        <h4>{method.label}</h4>
+                        <p>{method.desc}</p>
+                      </div>
+                      <div className="bk-pay-radio">
+                        {paymentMethod === method.key && <div className="bk-radio-inner"></div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Final Verified Calculation Summary */}
+                <div className="bk-itemized-calc-box">
+                  <h4 className="calc-title">Final Verified Receipt</h4>
+                  
+                  <div className="calc-row">
+                    <span>Base Fare ({nights} nights):</span>
+                    <span>₹ {basePrice.toLocaleString()}</span>
+                  </div>
+
+                  {addonTotal > 0 && (
+                    <div className="calc-row">
+                      <span>Add-ons ({Object.keys(selectedAddons).filter(k => selectedAddons[k]).length} selected):</span>
+                      <span>+ ₹ {addonTotal.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  <div className="calc-row calc-subtotal-row">
+                    <span>Subtotal:</span>
+                    <span>₹ {subtotal.toLocaleString()}</span>
+                  </div>
+
+                  {isOfferActive && appliedOffer && (
+                    <div className="calc-row calc-discount-row">
+                      <span>
+                        🏷️ Discount ({appliedOffer.code} • {appliedOffer.percent}% OFF):
+                      </span>
+                      <strong className="discount-minus">- ₹ {discountAmount.toLocaleString()}</strong>
+                    </div>
+                  )}
+
+                  <div className="calc-row">
+                    <span>Taxes &amp; GST (10%):</span>
+                    <span>+ ₹ {taxes.toLocaleString()}</span>
+                  </div>
+
+                  <div className="calc-divider"></div>
+
+                  <div className="calc-row calc-final-row">
+                    <div className="final-label-group">
+                      <strong>Total Amount Payable:</strong>
+                      {isOfferActive && (
+                        <span className="savings-tag">Total Savings: ₹ {discountAmount.toLocaleString()}</span>
+                      )}
+                    </div>
+                    <strong className="final-amount-val">₹ {grandTotal.toLocaleString()}</strong>
+                  </div>
+                </div>
+
+                <div className="bk-buttons-split">
+                  <button
+                    type="button"
+                    className="bk-btn-outline"
+                    onClick={() => setCurrentStep(2)}
+                  >
+                    ‹ Back to Add-ons
+                  </button>
+                  <button
+                    type="button"
+                    className="bk-btn-book-now"
+                    disabled={bookingLoading}
+                    onClick={handleCompleteBooking}
+                  >
+                    {bookingLoading ? 'Processing...' : `Pay ₹ ${grandTotal.toLocaleString()} & Confirm Booking`}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

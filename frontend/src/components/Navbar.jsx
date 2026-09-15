@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 
 function Navbar({ user, onLogout }) {
   const navigate = useNavigate();
@@ -11,11 +11,13 @@ function Navbar({ user, onLogout }) {
     setMenuOpen(false);
   };
 
+  const closeMenu = () => setMenuOpen(false);
+
   return (
     <nav className="navbar">
       <div className="navbar-container">
         {/* Logo */}
-        <Link to="/" className="navbar-logo">
+        <Link to="/" className="navbar-logo" onClick={closeMenu}>
           <div className="logo-icon">🏡</div>
           <div className="logo-text">
             <span className="logo-name">Farm House</span>
@@ -23,37 +25,129 @@ function Navbar({ user, onLogout }) {
           </div>
         </Link>
 
-        {/* Desktop Nav Links */}
+        {/* Desktop & Mobile Navigation Links */}
         <div className={`nav-menu ${menuOpen ? 'open' : ''}`}>
-          <Link to="/" className="nav-link" onClick={() => setMenuOpen(false)}>Home</Link>
-          <Link to="/farmhouses" className="nav-link" onClick={() => setMenuOpen(false)}>Farm Houses</Link>
-          <Link to="/about" className="nav-link" onClick={() => setMenuOpen(false)}>About</Link>
-          <Link to="/farmhouses" className="nav-link" onClick={() => setMenuOpen(false)}>Gallery</Link>
-          <Link to="/about" className="nav-link" onClick={() => setMenuOpen(false)}>Contact</Link>
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            onClick={closeMenu}
+          >
+            Home
+          </NavLink>
 
+          <NavLink
+            to="/farmhouses"
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            onClick={closeMenu}
+          >
+            Farm Houses
+          </NavLink>
+
+          <NavLink
+            to="/about"
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            onClick={closeMenu}
+          >
+            About
+          </NavLink>
+
+          <NavLink
+            to="/gallery"
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            onClick={closeMenu}
+          >
+            Gallery
+          </NavLink>
+
+          <NavLink
+            to="/offers"
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            onClick={closeMenu}
+          >
+            Offers
+            <span className="nav-discount-badge">%</span>
+          </NavLink>
+
+          <NavLink
+            to="/faq"
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            onClick={closeMenu}
+          >
+            FAQ
+          </NavLink>
+
+          <NavLink
+            to="/contact"
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            onClick={closeMenu}
+          >
+            Contact
+          </NavLink>
+
+          {/* User Auth Section */}
           {user ? (
-            <>
-              <Link to="/my-bookings" className="nav-link" onClick={() => setMenuOpen(false)}>My Bookings</Link>
+            <div className="nav-user-actions">
+              <NavLink
+                to="/my-bookings"
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                My Bookings
+              </NavLink>
+
               {user.role === 'OWNER' && (
-                <Link to="/owner-dashboard" className="nav-link" onClick={() => setMenuOpen(false)}>Dashboard</Link>
+                <NavLink
+                  to="/owner-dashboard"
+                  className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                  onClick={closeMenu}
+                >
+                  Owner Panel
+                </NavLink>
               )}
+
               {(user.role === 'ADMIN' || user.role === 'SUPERADMIN') && (
-                <Link to="/admin" className="nav-link" onClick={() => setMenuOpen(false)}>Admin</Link>
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                  onClick={closeMenu}
+                >
+                  Admin
+                </NavLink>
               )}
+
               <span className="nav-user-welcome">Hi, {user.name?.split(' ')[0]}</span>
-              <button onClick={handleLogout} className="nav-btn-login">Logout</button>
-            </>
+              <button onClick={handleLogout} className="nav-btn-logout">Logout</button>
+            </div>
           ) : (
-            <>
-              <Link to="/login" className="nav-btn-login" onClick={() => setMenuOpen(false)}>Login</Link>
-              <Link to="/register" className="nav-btn-signup" onClick={() => setMenuOpen(false)}>Sign Up</Link>
-            </>
+            <div className="nav-auth-buttons">
+              <NavLink
+                to="/login"
+                className={({ isActive }) => `nav-btn-login ${isActive ? 'active-btn' : ''}`}
+                onClick={closeMenu}
+              >
+                Login
+              </NavLink>
+              <NavLink
+                to="/register"
+                className="nav-btn-signup"
+                onClick={closeMenu}
+              >
+                Sign Up
+              </NavLink>
+            </div>
           )}
         </div>
 
-        {/* Hamburger */}
-        <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
-          <span></span><span></span><span></span>
+        {/* Mobile Hamburger Button */}
+        <button
+          className={`hamburger ${menuOpen ? 'active' : ''}`}
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Toggle menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
         </button>
       </div>
     </nav>

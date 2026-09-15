@@ -1,0 +1,347 @@
+/* ========================================================
+   GALLERY PAGE STYLES — EXACT 1:1 TO MOCKUP PHOTO (SCREEN 3)
+   ======================================================== */
+
+.gallery-mockup-page {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #ffffff;
+  color: #1a2e20;
+}
+
+/* ── 1. Hero Banner ── */
+.gallery-hero {
+  position: relative;
+  background: linear-gradient(135deg, rgba(13, 56, 32, 0.88) 0%, rgba(20, 85, 48, 0.82) 100%),
+              url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1600');
+  background-size: cover;
+  background-position: center;
+  color: #ffffff;
+  padding: 4.5rem 2rem 3.8rem;
+  text-align: left;
+}
+
+.gallery-hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(14, 53, 29, 0.35);
+  pointer-events: none;
+}
+
+.gallery-hero-inner {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  z-index: 2;
+}
+
+.gallery-hero-inner h1 {
+  font-family: var(--font-heading, 'Playfair Display', serif);
+  font-size: clamp(2.4rem, 4.5vw, 3.4rem);
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.4rem;
+  letter-spacing: -0.02em;
+}
+
+.gallery-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  color: #c4e5cf;
+}
+
+.gallery-breadcrumb a {
+  color: #a8dfb7;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.gallery-breadcrumb a:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.gallery-breadcrumb .sep {
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
+.gallery-breadcrumb .current {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ── 2. Content Container & Filter Pills ── */
+.gallery-content-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 2rem 5rem;
+}
+
+.gallery-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.gallery-pill-btn {
+  background: #ffffff;
+  color: #375340;
+  border: 1.5px solid #d4eadb;
+  padding: 0.55rem 1.4rem;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gallery-pill-btn:hover {
+  border-color: #1a6b3c;
+  color: #1a6b3c;
+}
+
+.gallery-pill-btn.active {
+  background: #1a6b3c;
+  border-color: #1a6b3c;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(26, 107, 60, 0.25);
+}
+
+/* ── 3. 3-Column Mosaic Grid (Mockup #3) ── */
+.gallery-mosaic-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.mosaic-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.mosaic-card {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  background: #1a2e20;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+}
+
+.mosaic-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 32px rgba(26, 107, 60, 0.16);
+}
+
+.mosaic-card img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.mosaic-card:hover img {
+  transform: scale(1.05);
+}
+
+/* Aspect height variants matching the mockup layout */
+.mosaic-card.tall img {
+  height: 380px;
+}
+
+.mosaic-card.medium img {
+  height: 245px;
+}
+
+.mosaic-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to top, rgba(14, 53, 29, 0.88) 0%, rgba(14, 53, 29, 0.2) 60%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.2rem;
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.mosaic-card:hover .mosaic-overlay {
+  opacity: 1;
+}
+
+.mosaic-tag {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(6px);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  margin-bottom: 0.4rem;
+  align-self: flex-start;
+}
+
+.mosaic-title {
+  font-family: var(--font-heading, 'Playfair Display', serif);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.2rem;
+}
+
+.mosaic-loc {
+  font-size: 0.8rem;
+  color: #c4e5cf;
+}
+
+/* ── 4. Modal Lightbox ── */
+.gallery-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 25, 16, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.gallery-modal-box {
+  background: #ffffff;
+  border-radius: 18px;
+  max-width: 850px;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+}
+
+.gallery-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.gallery-modal-close:hover {
+  background: #e53935;
+}
+
+.modal-img-container {
+  width: 100%;
+  height: 440px;
+  background: #111;
+  overflow: hidden;
+}
+
+.modal-img-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-info-panel {
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.modal-tag {
+  display: inline-block;
+  background: #eaf7ee;
+  color: #1a6b3c;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2rem 0.65rem;
+  border-radius: 12px;
+  margin-bottom: 0.3rem;
+}
+
+.modal-info-left h2 {
+  font-family: var(--font-heading, 'Playfair Display', serif);
+  font-size: 1.4rem;
+  color: #145530;
+  margin-bottom: 0.2rem;
+}
+
+.modal-info-left p {
+  font-size: 0.88rem;
+  color: #5c7263;
+}
+
+.modal-book-btn {
+  background: #1a6b3c;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.75rem 1.4rem;
+  border-radius: 8px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.modal-book-btn:hover {
+  background: #145530;
+  box-shadow: 0 4px 14px rgba(26, 107, 60, 0.3);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .gallery-mosaic-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .gallery-mosaic-grid {
+    grid-template-columns: 1fr;
+  }
+  .modal-info-panel {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .modal-book-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
