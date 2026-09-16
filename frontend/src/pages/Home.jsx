@@ -306,22 +306,18 @@ function Home({ user }) {
         </div>
       </section>
 
-      {/* 4. SPECIAL DISCOUNTS & OFFERS BANNER */}
+      {/* 4. SPECIAL GETAWAY BANNER */}
       <div className="promo-banner-container">
         <div className="promo-banner">
           <div className="promo-content">
-            <span className="promo-tag">✨ Plan Your Next Getaway</span>
-            <h2 className="promo-title">Special Discounts & Offers</h2>
+            <span className="promo-tag">📍 Planning a Special Getaway?</span>
+            <h2 className="promo-title">Make Memories, Not Just Bookings</h2>
             <p className="promo-subtitle">
-              Get the best deals on your favorite farm houses. Book now and save more!
+              Choose from a wide range of farm houses for family trips, romantic getaways, corporate retreats and more.
             </p>
             <Link to="/farmhouses" className="promo-btn">
-              Explore Offers →
+              Explore All Farm Houses →
             </Link>
-          </div>
-          <div className="promo-badge-box">
-            <small>Up to</small>
-            20% OFF
           </div>
         </div>
       </div>

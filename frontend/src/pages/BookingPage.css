@@ -312,84 +312,23 @@
   margin-bottom: 2rem;
 }
 
-/* ── Interactive Calendar & Standard Allocations ── */
+/* ── Interactive Calendar & Standard Allocations (Matches Reference Design) ── */
 .bk-calendar-manifest-card {
   display: grid;
   grid-template-columns: 1.15fr 1fr;
-  gap: 1.5rem;
-  background: #fbfdfc;
-  border: 1.5px solid #e1efe5;
-  border-radius: 16px;
+  gap: 1.6rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
   padding: 1.6rem;
   margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
-/* Left Calendar Pane */
+/* ──── Left Column: Interactive Calendar ──── */
 .bk-cal-pane {
-  background: #ffffff;
-  border: 1px solid #ddecde;
-  border-radius: 12px;
-  padding: 1.2rem;
-}
-
-.bk-cal-top-bar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.bk-cal-subtitle {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #1a6b3c;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  display: block;
-}
-
-.bk-cal-heading-group h4 {
-  font-family: var(--font-heading, 'Playfair Display', serif);
-  font-size: 1.15rem;
-  color: #145530;
-  margin: 0;
-}
-
-.bk-cal-month-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.bk-nav-arrow {
-  background: #f0f9f3;
-  border: 1px solid #d4eadb;
-  border-radius: 6px;
-  padding: 0.2rem 0.5rem;
-  font-weight: 700;
-  color: #1a6b3c;
-  cursor: pointer;
-}
-
-.bk-month-title {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #1a2e20;
-}
-
-.bk-cal-days-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.3rem;
-  text-align: center;
-  margin-bottom: 1rem;
-}
-
-.bk-wk {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #88a390;
-  padding: 0.3rem 0;
+  flex-direction: column;
 }
 
 .bk-cal-alert {
@@ -404,350 +343,478 @@
   line-height: 1.4;
 }
 
-/* Active Slot Filter Banner */
-.bk-cal-slot-filter-banner {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  padding: 0.4rem 0.75rem;
-  border-radius: 8px;
-  margin-bottom: 0.85rem;
-  font-size: 0.76rem;
+.bk-cal-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-bottom: 0.8rem;
 }
 
-.bk-cal-slot-filter-banner .filter-label {
-  font-weight: 700;
-  color: #166534;
+.bk-wk {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #94a3b8;
+  text-align: center;
+  padding: 0.2rem 0;
+  text-transform: uppercase;
 }
 
-.bk-cal-slot-filter-banner .filter-badge {
-  font-weight: 600;
-  color: #15803d;
-}
-
-/* Day Cell Layout */
-.bk-day-cell {
-  position: relative;
+/* Day Card */
+.bk-cal-day-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  font-size: 0.82rem;
-  padding: 0.35rem 0.15rem 0.3rem;
-  border-radius: 9px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 10px;
+  padding: 0.3rem 0.25rem 0.35rem;
+  min-height: 82px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  gap: 0.2rem;
+  transition: all 0.18s ease;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.bk-cal-day-card:hover:not(.disabled) {
+  border-color: #94a3b8;
+}
+
+.bk-cal-day-card.in-range {
+  background: #e8f5e9;
+  border-color: #c8e6c9;
+}
+
+.bk-cal-day-card.range-start,
+.bk-cal-day-card.range-end {
+  border-color: #166534;
+  box-shadow: inset 0 0 0 1px #166534;
+}
+
+.bk-cal-day-card.disabled {
+  background: #f8fafc;
+  border-color: #f1f5f9;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.bk-cal-day-card.bk-empty {
+  visibility: hidden;
+  border: none;
+  background: transparent;
+}
+
+/* Day Header */
+.bk-cal-day-header {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 48px;
-  gap: 2px;
+  min-height: 18px;
+  padding: 0 0.15rem;
 }
 
-.bk-day-num {
-  font-size: 0.82rem;
-  font-weight: 700;
-  line-height: 1.1;
-  color: #1e293b;
-}
-
-/* Day ☀️ & Night 🌙 Dual Badges inside cell */
-.bk-day-night-badges {
-  display: flex;
-  gap: 2px;
-  justify-content: center;
-  width: 100%;
-}
-
-.slot-badge {
-  font-size: 0.58rem;
-  font-weight: 700;
-  padding: 1px 3px;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  line-height: 1.1;
-  letter-spacing: -0.2px;
-}
-
-/* Green available badge */
-.slot-badge.badge-avail {
-  background: #dcfce7;
-  color: #15803d;
-  border: 1px solid #86efac;
-}
-
-/* Red booked badge */
-.slot-badge.badge-booked {
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fca5a5;
-}
-
-/* Cell Status Variants */
-/* Both Available (Green) */
-.bk-day-cell.bk-slot-both-avail {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-}
-
-.bk-day-cell.bk-slot-both-avail:hover {
-  background: #dcfce7;
-  border-color: #86efac;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(22, 101, 52, 0.15);
-}
-
-/* Partial Slot (One open, one closed) */
-.bk-day-cell.bk-slot-partial-avail {
-  background: #fefce8;
-  border-color: #fde047;
-}
-
-.bk-day-cell.bk-slot-partial-avail:hover {
-  background: #fef9c3;
-  border-color: #eab308;
-  transform: translateY(-1px);
-}
-
-/* Both Booked (Red) */
-.bk-day-cell.bk-slot-both-booked {
-  background: #fef2f2;
-  border-color: #fecaca;
-  opacity: 0.85;
-}
-
-.bk-day-cell.bk-slot-both-booked .bk-day-num {
-  color: #991b1b;
-  text-decoration: line-through;
-}
-
-.bk-day-cell.bk-slot-both-booked:hover {
-  background: #fee2e2;
-  border-color: #f87171;
-}
-
-/* Active Slot Match / Blocked Indicators */
-.bk-day-cell.bk-slot-match-blocked:not(.bk-selected) {
-  opacity: 0.65;
-}
-
-/* 🟩 SELECTED STAY (SOLID FOREST GREEN) */
-.bk-day-cell.bk-selected {
-  background: #d1fae5 !important;
-  border-color: #10b981 !important;
-}
-
-.bk-day-cell.bk-selected .bk-day-num {
-  color: #065f46 !important;
+.bk-cal-day-num {
+  font-size: 0.78rem;
   font-weight: 800;
-}
-
-.bk-day-cell.bk-start, .bk-day-cell.bk-end {
-  background: #1a6b3c !important;
-  border-color: #145530 !important;
-  box-shadow: 0 4px 10px rgba(26, 107, 60, 0.4);
-}
-
-.bk-day-cell.bk-start .bk-day-num,
-.bk-day-cell.bk-end .bk-day-num {
-  color: #ffffff !important;
-  font-weight: 800;
-}
-
-.bk-day-cell.bk-start .slot-badge,
-.bk-day-cell.bk-end .slot-badge {
-  background: rgba(255, 255, 255, 0.25) !important;
-  color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.5) !important;
-}
-
-/* Updated Detailed Legend Bar */
-.bk-cal-legend-bar {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.6rem 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.bk-legend-slot-indicators {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.bk-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.72rem;
-  font-weight: 600;
   color: #334155;
 }
 
-.bk-sample-badges {
-  display: inline-flex;
-  gap: 2px;
+.bk-cal-day-card.disabled .bk-cal-day-num {
+  color: #cbd5e1;
 }
 
-.bk-legend-dot {
-  width: 10px;
-  height: 10px;
+.bk-cal-today-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: #166534;
+  background: #dcfce7;
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1.1;
+}
+
+/* Slot Buttons inside Day Card */
+.bk-slot-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  min-height: 24px;
+  padding: 0.18rem 0.35rem;
+  border: 1px solid #d8f3dc;
+  border-radius: 6px;
+  background: #f0fdf4;
+  color: #166534;
+  font-family: inherit;
+  font-size: 0.62rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.bk-slot-btn:hover:not(:disabled) {
+  background: #d8f3dc;
+  border-color: #74c69d;
+}
+
+.bk-slot-btn.selected {
+  background: #166534;
+  border-color: #166534;
+  color: #ffffff;
+}
+
+.bk-slot-btn.disabled {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.bk-slot-icon {
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.bk-slot-name {
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+/* Clean 3-Dot Legend */
+.bk-cal-clean-legend {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.6rem 0 0.9rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.bk-legend-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.bk-legend-swatch {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   display: inline-block;
 }
 
-.dot-sel {
-  background: #1a6b3c;
-  box-shadow: 0 0 0 2px #bbf7d0;
+.bk-legend-swatch.available {
+  background: #22c55e;
 }
 
-.bk-cal-date-tags {
+.bk-legend-swatch.selected {
+  background: #14532d;
+}
+
+.bk-legend-swatch.range {
+  background: #86efac;
+}
+
+/* Check-in / Check-out Stay Box */
+.bk-cal-stay-box {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
-  padding-top: 0.8rem;
-  border-top: 1px solid #edf5ef;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #d8f3dc;
+  border-radius: 12px;
+  background: #ffffff;
+  margin-bottom: 1rem;
 }
 
-.bk-date-tag {
-  background: #f8fdf9;
-  border: 1px solid #d4eadb;
-  padding: 0.4rem 0.6rem;
-  border-radius: 8px;
+.bk-csb-col {
   display: flex;
   flex-direction: column;
+  gap: 0.15rem;
 }
 
-.bk-date-tag span {
-  font-size: 0.68rem;
+.bk-csb-label {
+  font-size: 0.64rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.bk-csb-date {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.bk-csb-hint {
+  font-size: 0.64rem;
+  color: #94a3b8;
+}
+
+.bk-csb-arrow {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #166534;
+  text-align: center;
+}
+
+/* Purple Continue to Add-ons Button */
+.bk-continue-addons-btn {
+  width: 100%;
+  padding: 0.85rem 1.5rem;
+  background: #a78bfa;
+  color: #ffffff;
+  font-size: 0.95rem;
   font-weight: 700;
-  color: #5c7263;
+  font-family: inherit;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(167, 139, 250, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
 }
 
-.bk-date-tag strong {
-  font-size: 0.82rem;
-  color: #145530;
+.bk-continue-addons-btn:hover {
+  background: #9061f9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(167, 139, 250, 0.35);
 }
 
-/* Right Allocations Pane */
+/* ──── Right Column: Allocations & Manifest ──── */
 .bk-alloc-pane {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
 }
 
-.bk-alloc-title {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #145530;
-  margin: 0;
+.bk-quick-select-label {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.8rem;
 }
 
-.bk-alloc-pills-row {
-  display: flex;
-  gap: 0.5rem;
+/* Allocations Row */
+.bk-alloc-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 1rem;
 }
 
-.bk-alloc-box {
-  flex: 1;
+.bk-alloc-pill {
   background: #ffffff;
-  border: 1.5px solid #d4eadb;
+  border: 1.5px solid #e2e8f0;
   border-radius: 10px;
-  padding: 0.6rem 0.4rem;
-  text-align: center;
+  padding: 0.75rem 0.6rem;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
+  gap: 0.25rem;
 }
 
-.bk-alloc-box strong {
-  font-size: 0.82rem;
-  color: #1a2e20;
-}
-
-.bk-alloc-box span {
-  font-size: 0.68rem;
-  color: #6b8774;
-}
-
-.bk-alloc-box.active {
-  border-color: #1a6b3c;
-  background: #eaf7ee;
-}
-
-.bk-alloc-box.active strong {
-  color: #1a6b3c;
-}
-
-.bk-perks-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.bk-perk-card {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  background: #ffffff;
-  border: 1px solid #ddecde;
-  border-radius: 8px;
-  padding: 0.45rem 0.7rem;
-}
-
-.bk-perk-icon {
-  font-size: 1.1rem;
-}
-
-.bk-perk-card strong {
-  font-size: 0.78rem;
-  color: #145530;
-  display: block;
-}
-
-.bk-perk-card p {
-  font-size: 0.68rem;
-  color: #6b8774;
+.bk-alloc-pill h4 {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #1e293b;
   margin: 0;
 }
 
-.bk-manifest-certificate {
+.bk-alloc-pill p {
+  font-size: 0.68rem;
+  color: #64748b;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bk-alloc-pill.selected {
+  border-color: #166534;
+  background: #f0fdf4;
+}
+
+.bk-alloc-pill.selected h4 {
+  color: #166534;
+}
+
+/* 3 Feature Highlights in a Row */
+.bk-features-triplet {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 1.2rem;
+}
+
+.bk-feat-card {
   background: #ffffff;
-  border: 1.5px dashed #4caf7d;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 0.75rem;
+  padding: 0.75rem 0.65rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
 }
 
-.bk-manifest-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #1a6b3c;
-  border-bottom: 1px solid #edf5ef;
-  padding-bottom: 0.3rem;
-  margin-bottom: 0.4rem;
+.bk-feat-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
-.bk-m-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.72rem;
+.bk-feat-text strong {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #1e293b;
+  display: block;
   margin-bottom: 0.2rem;
 }
 
-.bk-manifest-seal {
+.bk-feat-text p {
+  font-size: 0.64rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* Official Reservation Manifest Box */
+.bk-official-manifest {
+  background: #ffffff;
+  border: 1.5px dashed #86efac;
+  border-radius: 12px;
+  padding: 1.1rem 1.2rem;
+}
+
+.bk-om-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.bk-om-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.bk-om-title {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #166534;
+  letter-spacing: 0.05em;
+}
+
+.bk-om-ref {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.bk-om-promo-btn {
+  background: #14532d;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.bk-om-promo-btn:hover {
+  background: #166534;
+  transform: translateY(-1px);
+}
+
+.bk-om-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.bk-om-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bk-om-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bk-om-val {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.bk-om-footer-note {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.68rem;
-  color: #145530;
-  background: #f0f9f3;
-  padding: 0.35rem;
-  border-radius: 4px;
-  margin-top: 0.4rem;
-  text-align: center;
+  color: #166534;
+  background: #f0fdf4;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  line-height: 1.4;
+}
+
+.bk-om-shield {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .bk-calendar-manifest-card {
+    grid-template-columns: 1fr;
+    padding: 1.2rem;
+  }
+  .bk-om-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .bk-features-triplet,
+  .bk-alloc-row {
+    grid-template-columns: 1fr;
+  }
+  .bk-om-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bk-cal-days-grid {
+    gap: 0.2rem;
+  }
+  .bk-slot-name {
+    display: none;
+  }
 }
 
 /* ── 🌟 PROMO CODE / OFFER SECTION ── */

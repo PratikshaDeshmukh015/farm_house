@@ -16,8 +16,8 @@
   position: relative;
   width: 100%;
   min-height: 560px;
-  background: linear-gradient(to right, rgba(14, 38, 22, 0.75) 0%, rgba(20, 50, 30, 0.45) 50%, rgba(0, 0, 0, 0.2) 100%),
-              url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1600&auto=format&fit=crop&q=80') center/cover no-repeat;
+  background: linear-gradient(to right, rgba(14, 38, 22, 0.72) 0%, rgba(20, 50, 30, 0.45) 45%, rgba(0, 0, 0, 0.15) 100%),
+              url('/hero-bg.jpg') center/cover no-repeat;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -443,83 +443,66 @@
 }
 
 .promo-banner {
-  background: linear-gradient(to right, rgba(244, 237, 224, 0.95) 0%, rgba(248, 241, 230, 0.85) 50%, rgba(248, 241, 230, 0.2) 100%),
-              url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&auto=format&fit=crop&q=80') right center/cover no-repeat;
+  background: linear-gradient(to right, rgba(14, 38, 22, 0.88) 0%, rgba(14, 38, 22, 0.65) 50%, rgba(14, 38, 22, 0.2) 100%),
+              url('/banner-bg.jpg') center/cover no-repeat;
   border-radius: 20px;
-  padding: 2.2rem 2.8rem;
+  padding: 2.8rem 3rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 10px 30px rgba(40, 70, 45, 0.08);
-  border: 1px solid #ebdcc5;
+  box-shadow: 0 10px 30px rgba(40, 70, 45, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   overflow: hidden;
 }
 
 .promo-content {
-  max-width: 580px;
+  max-width: 650px;
 }
 
 .promo-tag {
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  color: #b45309;
-  letter-spacing: 0.08em;
+  color: #a8dfba;
+  letter-spacing: 0.05em;
   display: block;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
 }
 
 .promo-title {
   font-family: var(--font-heading, 'Playfair Display', serif);
-  font-size: 1.85rem;
+  font-size: 2.1rem;
   font-weight: 800;
-  color: #2b261f;
-  margin: 0 0 0.5rem;
+  color: #ffffff;
+  margin: 0 0 0.6rem;
 }
 
 .promo-subtitle {
-  font-size: 0.92rem;
-  color: #635748;
+  font-size: 0.95rem;
+  color: #e2f1e8;
   margin: 0 0 1.5rem;
+  line-height: 1.6;
 }
 
 .promo-btn {
   background: #145530;
   color: #ffffff;
-  padding: 0.65rem 1.6rem;
+  padding: 0.75rem 1.8rem;
   border-radius: 30px;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 700;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(20, 85, 48, 0.35);
 }
 
 .promo-btn:hover {
-  background: #0a331c;
+  background: #0d3820;
   transform: translateY(-2px);
-}
-
-.promo-badge-box {
-  background: #22c55e;
-  color: #ffffff;
-  padding: 0.8rem 1.4rem;
-  border-radius: 12px;
-  text-align: center;
-  font-weight: 800;
-  font-size: 1.15rem;
-  line-height: 1.2;
-  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
-  transform: rotate(-3deg);
-  margin-right: 2rem;
-}
-
-.promo-badge-box small {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(20, 85, 48, 0.45);
 }
 
 /* ---------------- WHY CHOOSE US & TESTIMONIALS (2 COLUMNS) ---------------- */

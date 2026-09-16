@@ -348,6 +348,78 @@ function BookingPage() {
     }
   };
 
+  const handleSlotPick = (day, slot) => {
+    if (!day) return;
+    const key = toDateKey(day);
+    const todayStr = toDateKey(new Date());
+    if (key < todayStr) return;
+
+    const slotInfo = getSlotData(key);
+    if (slot === 'AM' && slotInfo.day) {
+      setCalendarError(`Date ${key}: Day slot (☀️) is booked. Night slot may be available.`);
+      setTimeout(() => setCalendarError(''), 4000);
+      return;
+    }
+    if (slot === 'PM' && slotInfo.night) {
+      setCalendarError(`Date ${key}: Night slot (🌙) is booked. Day slot may be available.`);
+      setTimeout(() => setCalendarError(''), 4000);
+      return;
+    }
+
+    setCalendarError('');
+
+    if (!startDate || (startDate && endDate)) {
+      setStartDate(key);
+      setEndDate('');
+      setSelectedSlot(slot);
+    } else if (startDate && !endDate) {
+      if (key <= startDate) {
+        setStartDate(key);
+        setEndDate('');
+        setSelectedSlot(slot);
+      } else {
+        setEndDate(key);
+      }
+    }
+  };
+
+  const handleDayCardClick = (day) => {
+    if (!day) return;
+    const key = toDateKey(day);
+    const todayStr = toDateKey(new Date());
+    if (key < todayStr) return;
+
+    const slotInfo = getSlotData(key);
+    if (slotInfo.day && slotInfo.night) {
+      setCalendarError(`Date ${key} is fully booked.`);
+      setTimeout(() => setCalendarError(''), 4000);
+      return;
+    }
+
+    if (!startDate || (startDate && endDate)) {
+      setStartDate(key);
+      setEndDate('');
+      setSelectedSlot(slotInfo.day ? 'PM' : 'AM');
+    } else if (startDate && !endDate) {
+      if (key <= startDate) {
+        setStartDate(key);
+        setEndDate('');
+      } else {
+        setEndDate(key);
+      }
+    }
+  };
+
+  const formatDisplayDate = (dStr) => {
+    if (!dStr) return 'Select date';
+    try {
+      const d = new Date(dStr + 'T00:00:00');
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch {
+      return dStr;
+    }
+  };
+
   const handleToggleAddon = (key) => {
     setSelectedAddons(prev => ({
       ...prev,
@@ -499,152 +571,16 @@ function BookingPage() {
                 ══════════════════════════════════════════ */}
             {currentStep === 1 && (
               <div className="bk-card-box">
-                {/* When are you going? Slot Selection */}
-                <div className="bk-slot-group">
-                  <h3 className="bk-section-title">When are you going?</h3>
-                  <div className="bk-slot-pills-row">
-                    {SLOT_OPTIONS.map(slot => (
-                      <div
-                        key={slot.key}
-                        className={`bk-slot-pill ${selectedSlot === slot.key ? 'selected' : ''}`}
-                        onClick={() => setSelectedSlot(slot.key)}
-                      >
-                        <div className="bk-slot-header">
-                          <span className="bk-slot-title">{slot.label}</span>
-                          <span className="bk-slot-radio">
-                            {selectedSlot === slot.key && <span className="bk-radio-dot"></span>}
-                          </span>
-                        </div>
-                        <span className="bk-slot-timing">{slot.time}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Date Pickers Row */}
-                <div className="bk-input-row">
-                  <div className="bk-field-col">
-                    <label>Check-in Date</label>
-                    <div className="bk-input-wrap">
-                      <span className="bk-field-icon">📅</span>
-                      <input
-                        type="date"
-                        value={startDate}
-                        onChange={e => setStartDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="bk-field-col">
-                    <label>Check-out Date</label>
-                    <div className="bk-input-wrap">
-                      <span className="bk-field-icon">📅</span>
-                      <input
-                        type="date"
-                        value={endDate}
-                        min={startDate}
-                        onChange={e => setEndDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Guests & Time Slot Row */}
-                <div className="bk-input-row">
-                  <div className="bk-field-col">
-                    <label>Guests</label>
-                    <div className="bk-input-wrap">
-                      <span className="bk-field-icon">👤</span>
-                      <select
-                        value={guestCount}
-                        onChange={e => {
-                          setGuestCount(e.target.value);
-                          const num = parseInt(e.target.value) || 2;
-                          setSelectedCoupleCount(Math.ceil(num / 2));
-                        }}
-                      >
-                        <option value="2 Guests">2 Guests (1 Couple)</option>
-                        <option value="4 Guests">4 Guests (2 Couples)</option>
-                        <option value="6 Guests">6 Guests (3 Couples)</option>
-                        <option value="8 Guests">8 Guests (4 Couples)</option>
-                        <option value="10+ Guests">10+ Guests (Group)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="bk-field-col">
-                    <label>Time Slot</label>
-                    <div className="bk-input-wrap">
-                      <span className="bk-field-icon">⏰</span>
-                      <select
-                        value={timeSlotLabel}
-                        onChange={e => setTimeSlotLabel(e.target.value)}
-                      >
-                        <option value="Full Day">Full Day (24 Hours)</option>
-                        <option value="Day Only">Day Only (09:00 AM - 05:00 PM)</option>
-                        <option value="Night Only">Night Only (06:00 PM - 09:00 AM)</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Special Requests Textarea */}
-                <div className="bk-textarea-group">
-                  <label>Special Requests (Optional)</label>
-                  <textarea
-                    rows="3"
-                    placeholder="Any special requests? (e.g., extra bed, food preferences, barbecue kit, late arrival...)"
-                    value={specialRequests}
-                    onChange={e => setSpecialRequests(e.target.value)}
-                  ></textarea>
-                </div>
-
                 {/* ── Interactive Calendar & Standard Allocations ── */}
                 <div className="bk-calendar-manifest-card">
                   {/* Left Column: Calendar */}
                   <div className="bk-cal-pane">
-                    <div className="bk-cal-top-bar">
-                      <div className="bk-cal-heading-group">
-                        <span className="bk-cal-subtitle">Availability Calendar</span>
-                        <h4>Select your dates</h4>
-                      </div>
-                      <div className="bk-cal-month-nav">
-                        <button
-                          type="button"
-                          className="bk-nav-arrow"
-                          onClick={() => setCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-                        >
-                          &lt;
-                        </button>
-                        <span className="bk-month-title">
-                          {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                        </span>
-                        <button
-                          type="button"
-                          className="bk-nav-arrow"
-                          onClick={() => setCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-                        >
-                          &gt;
-                        </button>
-                      </div>
-                    </div>
-
                     {/* Calendar Error/Warning Toast */}
                     {calendarError && (
                       <div className="bk-cal-alert">
                         ⚠️ {calendarError}
                       </div>
                     )}
-
-                    {/* Active slot filter banner */}
-                    <div className="bk-cal-slot-filter-banner">
-                      <span className="filter-label">Selected Slot:</span>
-                      <span className="filter-badge">
-                        {selectedSlot === 'AM' && '☀️ AM (Day Only: 09:00 AM - 05:00 PM)'}
-                        {selectedSlot === 'PM' && '🌙 PM (Night Only: 06:00 PM - 09:00 AM)'}
-                        {selectedSlot === 'FULL_DAY' && '☀️+🌙 Full Day (24 Hours: 09:00 AM - 09:00 AM)'}
-                      </span>
-                    </div>
 
                     <div className="bk-cal-days-grid">
                       <div className="bk-wk">SUN</div>
@@ -656,189 +592,179 @@ function BookingPage() {
                       <div className="bk-wk">SAT</div>
 
                       {getCalendarDays(calendarMonth).map((day, idx) => {
-                        if (!day) return <div key={`empty-${idx}`} className="bk-day-cell bk-empty"></div>;
+                        if (!day) return <div key={`empty-${idx}`} className="bk-cal-day-card bk-empty"></div>;
                         const key = toDateKey(day);
-                        const slotData = getSlotData(key);
-                        const isDayBooked = slotData.day;
-                        const isNightBooked = slotData.night;
-                        const isBothBooked = isDayBooked && isNightBooked;
-                        const isBothAvailable = !isDayBooked && !isNightBooked;
-
-                        const isCurrentSlotAllowed = isSlotAvailable(key, selectedSlot);
+                        const todayStr = toDateKey(new Date());
+                        const isPastDate = key < todayStr;
+                        const isTodayDate = key === todayStr;
                         const isStart = startDate === key;
                         const isEnd = endDate === key;
                         const inRange = startDate && endDate && key > startDate && key < endDate;
-                        const isSelected = isStart || isEnd || inRange;
-
-                        let cellClass = 'bk-day-cell';
-                        if (isBothBooked) {
-                          cellClass += ' bk-slot-both-booked';
-                        } else if (isBothAvailable) {
-                          cellClass += ' bk-slot-both-avail';
-                        } else {
-                          cellClass += ' bk-slot-partial-avail';
-                        }
-
-                        if (isCurrentSlotAllowed) {
-                          cellClass += ' bk-slot-match-open';
-                        } else {
-                          cellClass += ' bk-slot-match-blocked';
-                        }
-
-                        if (isSelected) {
-                          cellClass += ' bk-selected';
-                          if (isStart) cellClass += ' bk-start';
-                          if (isEnd) cellClass += ' bk-end';
-                        }
+                        const slotData = getSlotData(key);
+                        const isDayBooked = slotData.day;
+                        const isNightBooked = slotData.night;
 
                         return (
-                          <button
+                          <div
                             key={key}
-                            type="button"
-                            className={cellClass}
-                            onClick={() => handleCalendarDayClick(day)}
-                            title={`Date: ${key}\n☀️ Day (AM): ${isDayBooked ? 'Booked (Red)' : 'Available (Green)'}\n🌙 Night (PM): ${isNightBooked ? 'Booked (Red)' : 'Available (Green)'}`}
+                            className={`bk-cal-day-card ${isPastDate ? 'disabled' : ''} ${inRange ? 'in-range' : ''} ${isStart ? 'range-start' : ''} ${isEnd ? 'range-end' : ''}`}
+                            onClick={() => !isPastDate && handleDayCardClick(day)}
                           >
-                            <span className="bk-day-num">{day.getDate()}</span>
-
-                            {/* Dual Day ☀️ & Night 🌙 Slot Badges */}
-                            <div className="bk-day-night-badges">
-                              <span
-                                className={`slot-badge ${isDayBooked ? 'badge-booked' : 'badge-avail'}`}
-                                title={`Day Slot: ${isDayBooked ? 'Booked (Red)' : 'Available (Green)'}`}
-                              >
-                                ☀️{isDayBooked ? '✕' : '✓'}
-                              </span>
-                              <span
-                                className={`slot-badge ${isNightBooked ? 'badge-booked' : 'badge-avail'}`}
-                                title={`Night Slot: ${isNightBooked ? 'Booked (Red)' : 'Available (Green)'}`}
-                              >
-                                🌙{isNightBooked ? '✕' : '✓'}
-                              </span>
+                            <div className={`bk-cal-day-header ${isTodayDate ? 'today' : ''}`}>
+                              <span className="bk-cal-day-num">{day.getDate()}</span>
+                              {isTodayDate && <span className="bk-cal-today-badge">Today</span>}
                             </div>
-                          </button>
+
+                            <button
+                              type="button"
+                              className={`bk-slot-btn ${isPastDate || isDayBooked ? 'disabled' : ''} ${(isStart || isEnd) && (selectedSlot === 'AM' || selectedSlot === 'FULL_DAY') ? 'selected' : ''}`}
+                              disabled={isPastDate || isDayBooked}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSlotPick(day, 'AM');
+                              }}
+                            >
+                              <span className="bk-slot-icon">☀️</span>
+                              <span className="bk-slot-name">Day</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              className={`bk-slot-btn ${isPastDate || isNightBooked ? 'disabled' : ''} ${(isStart || isEnd) && (selectedSlot === 'PM' || selectedSlot === 'FULL_DAY') ? 'selected' : ''}`}
+                              disabled={isPastDate || isNightBooked}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSlotPick(day, 'PM');
+                              }}
+                            >
+                              <span className="bk-slot-icon">🌙</span>
+                              <span className="bk-slot-name">Night</span>
+                            </button>
+                          </div>
                         );
                       })}
                     </div>
 
-                    {/* Updated Complete Day & Night Legend Bar */}
-                    <div className="bk-cal-legend-bar">
-                      <div className="bk-legend-slot-indicators">
-                        <div className="bk-legend-item">
-                          <div className="bk-sample-badges">
-                            <span className="slot-badge badge-avail">☀️✓</span>
-                            <span className="slot-badge badge-avail">🌙✓</span>
-                          </div>
-                          <span className="legend-label">Day &amp; Night Open (Green)</span>
-                        </div>
+                    {/* Clean 3-Dot Legend Matching Screenshot */}
+                    <div className="bk-cal-clean-legend">
+                      <span className="bk-legend-entry">
+                        <span className="bk-legend-swatch available"></span> Available
+                      </span>
+                      <span className="bk-legend-entry">
+                        <span className="bk-legend-swatch selected"></span> Selected
+                      </span>
+                      <span className="bk-legend-entry">
+                        <span className="bk-legend-swatch range"></span> Stay range
+                      </span>
+                    </div>
 
-                        <div className="bk-legend-item">
-                          <div className="bk-sample-badges">
-                            <span className="slot-badge badge-avail">☀️✓</span>
-                            <span className="slot-badge badge-booked">🌙✕</span>
-                          </div>
-                          <span className="legend-label">Day Open / Night Booked</span>
-                        </div>
-
-                        <div className="bk-legend-item">
-                          <div className="bk-sample-badges">
-                            <span className="slot-badge badge-booked">☀️✕</span>
-                            <span className="slot-badge badge-avail">🌙✓</span>
-                          </div>
-                          <span className="legend-label">Day Booked / Night Open</span>
-                        </div>
-
-                        <div className="bk-legend-item">
-                          <div className="bk-sample-badges">
-                            <span className="slot-badge badge-booked">☀️✕</span>
-                            <span className="slot-badge badge-booked">🌙✕</span>
-                          </div>
-                          <span className="legend-label">Fully Booked (Red)</span>
-                        </div>
-
-                        <div className="bk-legend-item">
-                          <span className="bk-legend-dot dot-sel"></span>
-                          <span className="legend-label">Your Stay Selection</span>
-                        </div>
+                    {/* Check-in / Check-out Clean Card */}
+                    <div className="bk-cal-stay-box">
+                      <div className="bk-csb-col">
+                        <span className="bk-csb-label">CHECK-IN</span>
+                        <strong className="bk-csb-date">{startDate ? formatDisplayDate(startDate) : 'Select date'}</strong>
+                        <small className="bk-csb-hint">{startDate ? (selectedSlot === 'PM' ? 'Night arrival' : 'Day arrival') : 'Your arrival date'}</small>
+                      </div>
+                      <div className="bk-csb-arrow">→</div>
+                      <div className="bk-csb-col">
+                        <span className="bk-csb-label">CHECK-OUT</span>
+                        <strong className="bk-csb-date">{endDate ? formatDisplayDate(endDate) : 'Select date'}</strong>
+                        <small className="bk-csb-hint">{endDate ? 'Your departure date' : 'Your departure date'}</small>
                       </div>
                     </div>
 
-                    <div className="bk-cal-date-tags">
-                      <div className="bk-date-tag">
-                        <span>CHECK-IN</span>
-                        <strong>{startDate || 'Select date'}</strong>
-                      </div>
-                      <div className="bk-date-tag">
-                        <span>CHECK-OUT</span>
-                        <strong>{endDate || 'Select date'}</strong>
-                      </div>
-                    </div>
+                    {/* Purple Continue Button */}
+                    <button
+                      type="button"
+                      className="bk-continue-addons-btn"
+                      onClick={() => setCurrentStep(2)}
+                    >
+                      Continue to Add-ons →
+                    </button>
                   </div>
 
                   {/* Right Column: Standard Allocations & Manifest */}
                   <div className="bk-alloc-pane">
-                    <h4 className="bk-alloc-title">Select Stay Category &amp; Guest Manifest</h4>
+                    <div className="bk-quick-select-label">QUICK SELECT STANDARD ALLOCATIONS:</div>
 
-                    <div className="bk-alloc-pills-row">
+                    <div className="bk-alloc-row">
                       {COUPLE_ALLOCATIONS.map(alloc => (
                         <div
                           key={alloc.count}
-                          className={`bk-alloc-box ${selectedCoupleCount === alloc.count ? 'active' : ''}`}
+                          className={`bk-alloc-pill ${selectedCoupleCount === alloc.count ? 'selected' : ''}`}
                           onClick={() => handleSelectCouple(alloc)}
                         >
-                          <strong>{alloc.label}</strong>
-                          <span>{alloc.sub}</span>
+                          <h4>{alloc.label}</h4>
+                          <p>{alloc.sub}</p>
                         </div>
                       ))}
                     </div>
 
-                    <div className="bk-perks-stack">
-                      <div className="bk-perk-card">
-                        <span className="bk-perk-icon">🛎️</span>
-                        <div>
+                    {/* 3 Perks Horizontal Row */}
+                    <div className="bk-features-triplet">
+                      <div className="bk-feat-card">
+                        <span className="bk-feat-icon">🛎️</span>
+                        <div className="bk-feat-text">
                           <strong>Private Check-in &amp; Host</strong>
                           <p>Direct concierge greeting on arrival</p>
                         </div>
                       </div>
 
-                      <div className="bk-perk-card">
-                        <span className="bk-perk-icon">🏊</span>
-                        <div>
+                      <div className="bk-feat-card">
+                        <span className="bk-feat-icon">🏊</span>
+                        <div className="bk-feat-text">
                           <strong>Exclusive Pool &amp; Lawn</strong>
-                          <p>No sharing areas with outside guests</p>
+                          <p>No shared access with outside guests</p>
                         </div>
                       </div>
 
-                      <div className="bk-perk-card">
-                        <span className="bk-perk-icon">🍳</span>
-                        <div>
+                      <div className="bk-feat-card">
+                        <span className="bk-feat-icon">🍳</span>
+                        <div className="bk-feat-text">
                           <strong>Farmhouse Breakfast</strong>
-                          <p>Fresh estate morning menu baskets</p>
+                          <p>Fresh estate kitchen morning menu</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bk-manifest-certificate">
-                      <div className="bk-manifest-header">
-                        <span>OFFICIAL RESERVATION MANIFEST</span>
-                        <span className="bk-manifest-ref">Ref: CPL-102</span>
+                    {/* Official Reservation Manifest Box */}
+                    <div className="bk-official-manifest">
+                      <div className="bk-om-header">
+                        <div className="bk-om-title-group">
+                          <span className="bk-om-title">OFFICIAL RESERVATION MANIFEST</span>
+                          <span className="bk-om-ref">REF: EST-CPL-{selectedCoupleCount}X{selectedCoupleCount * 2}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="bk-om-promo-btn"
+                          onClick={() => handleApplyPromoCode('POOL20')}
+                        >
+                          {isOfferActive ? '✓ 20% Promo Applied' : 'Apply 20% Promo'}
+                        </button>
                       </div>
-                      <div className="bk-manifest-content">
-                        <div className="bk-m-row">
-                          <span>Stay profile:</span>
-                          <strong>{selectedCoupleCount} Couples Sanctuary</strong>
+
+                      <div className="bk-om-grid">
+                        <div className="bk-om-cell">
+                          <span className="bk-om-label">STAY PROFILE</span>
+                          <strong className="bk-om-val">Couples Luxury Sanctuary</strong>
                         </div>
-                        <div className="bk-m-row">
-                          <span>Accommodation:</span>
-                          <span>{selectedCoupleCount} Suites / {guestCount}</span>
+                        <div className="bk-om-cell">
+                          <span className="bk-om-label">TOTAL COUPLES</span>
+                          <strong className="bk-om-val">{selectedCoupleCount} Couple{selectedCoupleCount > 1 ? 's' : ''}</strong>
                         </div>
-                        <div className="bk-m-row">
-                          <span>Registered guests:</span>
-                          <span>{guestCount} Adults Verified</span>
+                        <div className="bk-om-cell">
+                          <span className="bk-om-label">TOTAL GUEST COUNT</span>
+                          <strong className="bk-om-val">{selectedCoupleCount * 2} Registered Adults</strong>
                         </div>
-                        <div className="bk-manifest-seal">
-                          🛡️ Private premises, sanitized linens, and dedicated staff
+                        <div className="bk-om-cell">
+                          <span className="bk-om-label">ACCOMMODATIONS</span>
+                          <strong className="bk-om-val">{selectedCoupleCount} Private Master Suite{selectedCoupleCount > 1 ? 's' : ''}</strong>
                         </div>
+                      </div>
+
+                      <div className="bk-om-footer-note">
+                        <span className="bk-om-shield">🛡️</span>
+                        <span>Verified Estate Standard: Guaranteed private premises, sanitized luxury linens, and dedicated caretaker.</span>
                       </div>
                     </div>
                   </div>
