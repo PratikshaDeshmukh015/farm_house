@@ -427,9 +427,9 @@ function FarmHouseDetail({ user }) {
           <p className="fd-location">📍 {farmhouse.location}</p>
           <button
             className="fd-gallery-jump"
-            onClick={() => document.getElementById("fd-gallery")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={() => navigate(`/gallery?farmhouseId=${farmhouse.id}`)}
           >
-            View Gallery ({galleryImages.length})
+            View Gallery ({galleryImages.length}) →
           </button>
         </div>
       </div>
@@ -439,6 +439,9 @@ function FarmHouseDetail({ user }) {
         <div className="fd-gallery-heading">
           <h2>Gallery</h2>
           <span>{galleryImages.length} {galleryImages.length === 1 ? "photo" : "photos"}</span>
+          <Link className="fd-gallery-open" to={`/gallery?farmhouseId=${farmhouse.id}`}>
+            Open Full Interactive Gallery →
+          </Link>
           {canAddGalleryPhotos && (
             <button
               className="fd-gallery-add"

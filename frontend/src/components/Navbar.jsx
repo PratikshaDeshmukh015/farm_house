@@ -53,14 +53,6 @@ function Navbar({ user, onLogout }) {
           </NavLink>
 
           <NavLink
-            to="/gallery"
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            onClick={closeMenu}
-          >
-            Gallery
-          </NavLink>
-
-          <NavLink
             to="/offers"
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             onClick={closeMenu}

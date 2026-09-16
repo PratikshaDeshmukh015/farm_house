@@ -90,6 +90,7 @@ function App() {
           <Route path="/farmhouses/:id" element={<FarmHouseDetail user={user} />} />
           <Route path="/about" element={<About />} />
           <Route path="/gallery" element={<Gallery />} />
+          <Route path="/gallery/:farmhouseId" element={<Gallery />} />
           <Route path="/offers" element={<Offers />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/contact" element={<Contact />} />

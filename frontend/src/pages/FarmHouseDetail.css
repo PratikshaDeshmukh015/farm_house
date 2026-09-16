@@ -239,6 +239,18 @@
   font-weight: 700;
 }
 
+.fd-gallery-open {
+  margin-left: auto;
+  color: #1a6b3c;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.fd-gallery-open:hover {
+  text-decoration: underline;
+}
+
 .fd-gallery-add:hover {
   background: #667eea;
   color: white;
