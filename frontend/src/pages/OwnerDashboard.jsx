@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { farmhouseAPI, bookingAPI, discountAPI } from '../api/axiosInstance';
+import { farmhouseAPI, bookingAPI, discountAPI, userAPI } from '../api/axiosInstance';
 import './OwnerDashboard.css';
 
 const Ico = ({ d, size = 18, stroke = 'currentColor', fill = 'none' }) => (
@@ -40,6 +40,13 @@ const ICONS = {
   refresh: 'M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15',
   tag: 'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82zM7 7h.01',
   chart: 'M18 20V10M12 20V4M6 20v-6',
+};
+
+const isDiscountExpired = (discount) => {
+  if (!discount.validTo) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(`${discount.validTo}T00:00:00`) < today;
 };
 
 function useToast() {
@@ -415,6 +422,11 @@ function OwnerDashboard({ user }) {
     title: '', description: '', farmhouseType: 'ALL', farmhouseId: '',
     discountPercent: '', specialOffer: '', validFrom: '', validTo: '', isActive: true,
   });
+  const [profileForm, setProfileForm] = useState({ name: user.name || '', phone: user.phone || '' });
+  const [profileEditing, setProfileEditing] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState('');
+  const [profileUser, setProfileUser] = useState(user);
 
   const { toasts, addToast } = useToast();
 
@@ -592,6 +604,29 @@ function OwnerDashboard({ user }) {
       fetchDiscounts();
     } catch (err) {
       addToast(err.response?.data?.message || 'Failed to delete discount', 'error');
+    }
+  };
+
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    setProfileSaving(true);
+    setProfileMessage('');
+    try {
+      const response = await userAPI.updateUser(user.id, {
+        name: profileForm.name.trim(),
+        phone: profileForm.phone.trim(),
+      });
+      const updatedUser = response.data?.user;
+      if (!response.data?.success || !updatedUser) throw new Error('Profile update failed');
+      setProfileUser(updatedUser);
+      setProfileForm({ name: updatedUser.name || '', phone: updatedUser.phone || '' });
+      localStorage.setItem('user', JSON.stringify({ ...user, ...updatedUser }));
+      setProfileEditing(false);
+      setProfileMessage('Profile updated successfully.');
+    } catch (err) {
+      setProfileMessage(err.response?.data?.message || err.message || 'Could not update profile.');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -1071,8 +1106,12 @@ function OwnerDashboard({ user }) {
                 <div className="od-empty"><div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏷️</div><h3>No discounts yet</h3><p>Create your first discount to attract more guests!</p><button className="od-btn od-btn-primary" onClick={() => openDiscountForm()}>Create Discount</button></div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: '1.25rem', marginTop: '1rem' }}>
-                  {discounts.map((d) => (
-                    <div key={d.id} className="od-card" style={{ borderLeft: d.isActive ? '3px solid #22c55e' : '3px solid #ef4444' }}>
+                  {discounts.map((d) => {
+                    const expired = isDiscountExpired(d);
+                    const statusLabel = expired ? 'Expired' : d.isActive ? 'Active' : 'Inactive';
+                    const statusClass = expired || !d.isActive ? 'od-badge-danger' : 'od-badge-success';
+                    return (
+                    <div key={d.id} className="od-card" style={{ borderLeft: expired ? '3px solid #f97316' : d.isActive ? '3px solid #22c55e' : '3px solid #ef4444' }}>
                       <div className="od-card-header">
                         <div className="od-card-title"><span style={{ fontSize: '1.2rem' }}>{ { ZEN_RETREAT: '🧘', POOL_PARTY: '🎉', ADVENTURE_WOODS: '⛰️', HERITAGE_PALACE: '🏰', ALL: '🏡' }[d.farmhouseType] || '🏡' }</span> {d.title}</div>
                         <div className="od-table-actions">
@@ -1083,14 +1122,15 @@ function OwnerDashboard({ user }) {
                       <div className="od-card-body">
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                           <span style={{ background: 'linear-gradient(135deg,#7c3aed,#db2777)', color: '#fff', borderRadius: '20px', padding: '0.2rem 0.8rem', fontSize: '0.8rem', fontWeight: 700 }}>{d.discountPercent}% OFF</span>
-                          <span className={`od-badge ${d.isActive ? 'od-badge-success' : 'od-badge-danger'}`}>{d.isActive ? 'Active' : 'Inactive'}</span>
+                          <span className={`od-badge ${statusClass}`}>{statusLabel}</span>
                           {d.farmhouseName ? <span className="od-badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(96, 165, 250, 0.4)' }}>🏡 {d.farmhouseName}</span> : <span className="od-badge od-badge-muted">{d.farmhouseType?.replace('_', ' ')}</span>}
                         </div>
                         {d.specialOffer && <p style={{ fontSize: '0.85rem', color: 'var(--od-muted)', marginBottom: '0.5rem' }}>🎁 {d.specialOffer}</p>}
                         {(d.validFrom || d.validTo) && <p style={{ fontSize: '0.78rem', color: 'var(--od-muted)' }}>⏰ {d.validFrom || '—'} → {d.validTo || '—'}</p>}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1098,13 +1138,18 @@ function OwnerDashboard({ user }) {
 
           {activeSection === 'profile' && (
             <div>
-              <div className="od-section-title" style={{ marginBottom: '1.5rem' }}><span>👤</span> My Profile</div>
+              <div className="od-section-header">
+                <div className="od-section-title"><span>👤</span> My Profile</div>
+                <button className="od-btn od-btn-primary" type="button" onClick={() => { setProfileEditing(true); setProfileMessage(''); }}>
+                  <Ico d={ICONS.edit} size={16} /> Edit Profile
+                </button>
+              </div>
               <div className="od-profile-section">
                 <div className="od-profile-card">
-                  <div className="od-profile-avatar">{(user.name || 'O')[0].toUpperCase()}</div>
-                  <div className="od-profile-name">{user.name}</div>
+                  <div className="od-profile-avatar">{(profileUser.name || 'O')[0].toUpperCase()}</div>
+                  <div className="od-profile-name">{profileUser.name}</div>
                   <div className="od-profile-role">Property Owner</div>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--od-muted)', marginBottom: '0.5rem' }}>📧 {user.email}</p>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--od-muted)', marginBottom: '0.5rem' }}>📧 {profileUser.email}</p>
                   <div className="od-profile-stats">
                     <div className="od-ps-item"><div className="od-ps-value">{farmhouses.length}</div><div className="od-ps-label">Props</div></div>
                     <div className="od-ps-item"><div className="od-ps-value">{bookings.length}</div><div className="od-ps-label">Bookings</div></div>
@@ -1116,12 +1161,29 @@ function OwnerDashboard({ user }) {
                   <div className="od-card" style={{ marginBottom: '1.25rem' }}>
                     <div className="od-card-header"><div className="od-card-title">Account Information</div></div>
                     <div className="od-card-body">
+                      {profileEditing && (
+                        <form onSubmit={handleProfileSubmit} className="od-profile-edit-form">
+                          <div className="od-form-group">
+                            <label className="od-form-label" htmlFor="owner-profile-name">Full Name</label>
+                            <input id="owner-profile-name" className="od-form-input" required value={profileForm.name} onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))} />
+                          </div>
+                          <div className="od-form-group">
+                            <label className="od-form-label" htmlFor="owner-profile-phone">Phone</label>
+                            <input id="owner-profile-phone" className="od-form-input" required value={profileForm.phone} onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))} />
+                          </div>
+                          <div className="od-profile-edit-actions">
+                            <button className="od-btn od-btn-secondary" type="button" onClick={() => setProfileEditing(false)}>Cancel</button>
+                            <button className="od-btn od-btn-primary" type="submit" disabled={profileSaving}>{profileSaving ? 'Saving...' : 'Save Changes'}</button>
+                          </div>
+                        </form>
+                      )}
+                      {profileMessage && <p className="od-profile-message">{profileMessage}</p>}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                         {[
-                          { label: 'Full Name', value: user.name || 'Owner' },
-                          { label: 'Email', value: user.email || 'N/A' },
-                          { label: 'User ID', value: `#${user.id || 'N/A'}` },
-                          { label: 'Role', value: user.role || 'OWNER' },
+                          { label: 'Full Name', value: profileUser.name || 'Owner' },
+                          { label: 'Email', value: profileUser.email || 'N/A' },
+                          { label: 'Phone', value: profileUser.phone || 'N/A' },
+                          { label: 'Role', value: profileUser.role || 'OWNER' },
                         ].map((item) => (
                           <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                             <span style={{ fontSize: '0.7rem', color: 'var(--od-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{item.label}</span>

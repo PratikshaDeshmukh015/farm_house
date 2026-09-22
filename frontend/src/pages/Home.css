@@ -484,6 +484,13 @@
   line-height: 1.6;
 }
 
+.promo-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .promo-btn {
   background: #145530;
   color: #ffffff;
@@ -503,6 +510,17 @@
   background: #0d3820;
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(20, 85, 48, 0.45);
+}
+
+.promo-offers-btn {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: none;
+}
+
+.promo-offers-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+  box-shadow: none;
 }
 
 /* ---------------- WHY CHOOSE US & TESTIMONIALS (2 COLUMNS) ---------------- */

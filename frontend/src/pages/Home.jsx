@@ -315,9 +315,14 @@ function Home({ user }) {
             <p className="promo-subtitle">
               Choose from a wide range of farm houses for family trips, romantic getaways, corporate retreats and more.
             </p>
-            <Link to="/farmhouses" className="promo-btn">
-              Explore All Farm Houses →
-            </Link>
+            <div className="promo-actions">
+              <Link to="/farmhouses" className="promo-btn">
+                Explore All Farm Houses →
+              </Link>
+              <Link to="/offers" className="promo-btn promo-offers-btn">
+                🏷️ View Offers
+              </Link>
+            </div>
           </div>
         </div>
       </div>

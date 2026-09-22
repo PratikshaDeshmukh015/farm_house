@@ -101,6 +101,127 @@
   transform: translateY(-2px);
 }
 
+/* Owner / admin discount management table */
+.ds-manage-panel {
+  max-width: 1200px;
+  margin: 2rem auto 0;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  position: relative;
+  z-index: 1;
+}
+.ds-manage-title {
+  margin: 0 0 1rem;
+  color: #1e293b;
+  font-size: 1.1rem;
+}
+.ds-manage-table-wrap {
+  overflow-x: auto;
+}
+.ds-manage-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  color: #334155;
+  font-size: 0.84rem;
+}
+.ds-manage-table th {
+  padding: 0.7rem 0.65rem;
+  background: #f8fafc;
+  color: #64748b;
+  text-align: left;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.ds-manage-table td {
+  padding: 0.75rem 0.65rem;
+  border-top: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+.ds-col-title {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+}
+.ds-col-emoji {
+  margin-right: 0.4rem;
+}
+.ds-type-chip,
+.ds-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.ds-type-chip {
+  background: #eef2ff;
+  color: #4338ca;
+}
+.ds-expired-tag,
+.ds-null-cell {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+.ds-col-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.ds-toggle-btn,
+.ds-manage-table .ds-mini-btn {
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ds-toggle-btn.active {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+.ds-toggle-btn.inactive {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+.ds-toggle-btn:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+.ds-toggle-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+.ds-manage-table .ds-mini-btn.edit {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+.ds-manage-table .ds-mini-btn.delete {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+.ds-manage-hint {
+  margin: 0.9rem 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+.expired-row {
+  background: #fffafa;
+}
+.inactive-row {
+  background: #f8fafc;
+}
+
 /* Empty state */
 .ds-no-deals {
   text-align: center;

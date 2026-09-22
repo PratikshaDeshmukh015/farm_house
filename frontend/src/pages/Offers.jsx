@@ -1,26 +1,44 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { discountAPI } from '../api/axiosInstance';
 import './Offers.css';
 
-// ONLY Active Verified Discounts (Matches Database: 20% OFF Pool Party Special)
-export const ACTIVE_DISCOUNTS = [
-  {
-    id: 'pool-party',
-    title: 'Pool Party Special',
-    discount: '20% OFF',
-    percent: 20,
-    tagline: 'Private Pools & Infinity Luxury',
-    description: 'Book select luxury estates with private heated pools and outdoor DJ party lawns.',
-    code: 'POOL20',
-    minNights: '1 night minimum',
-    validTill: 'Active Today',
-    status: 'ACTIVE NOW',
-    icon: '🏊'
-  }
-];
+const isOfferCurrentlyValid = (discount) => {
+  if (!discount || discount.isActive === false || Number(discount.discountPercent) <= 0) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (discount.validFrom && new Date(`${discount.validFrom}T00:00:00`) > today) return false;
+  if (discount.validTo && new Date(`${discount.validTo}T00:00:00`) < today) return false;
+  return true;
+};
+
+const toOfferCard = (discount) => ({
+  ...discount,
+  discount: `${discount.discountPercent}% OFF`,
+  percent: Number(discount.discountPercent),
+  tagline: discount.farmhouseType === 'POOL_PARTY' ? 'Private Pools & Infinity Luxury' : 'Exclusive Farmhouse Savings',
+  description: discount.description || discount.specialOffer || 'Enjoy exclusive savings on your farmhouse booking.',
+  code: discount.code || `DISCOUNT-${discount.id}`,
+  minNights: '1 night minimum',
+  validTill: discount.validTo ? `Until ${discount.validTo}` : 'Ongoing',
+  status: 'ACTIVE NOW',
+  icon: discount.farmhouseType === 'POOL_PARTY' ? '🏊' : '🏡',
+});
 
 function Offers() {
   const [copiedCode, setCopiedCode] = useState(null);
+  const [activeDiscounts, setActiveDiscounts] = useState([]);
+
+  useEffect(() => {
+    discountAPI.getActiveDiscounts()
+      .then((res) => {
+        const discounts = res.data?.success && Array.isArray(res.data.discounts)
+          ? res.data.discounts
+          : [];
+        setActiveDiscounts(discounts.filter(isOfferCurrentlyValid).map(toOfferCard));
+      })
+      .catch(() => setActiveDiscounts([]));
+  }, []);
 
   const handleCopy = (code) => {
     navigator.clipboard.writeText(code);
@@ -54,7 +72,7 @@ function Offers() {
         {/* Active counter */}
         <div className="active-offers-status-bar">
           <span className="live-dot-pulse"></span>
-          <span><strong>{ACTIVE_DISCOUNTS.length} Active Discounts</strong> available for booking right now</span>
+          <span><strong>{activeDiscounts.length} Active Discounts</strong> available for booking right now</span>
         </div>
 
         {/* Toast alert when copied */}
@@ -65,7 +83,7 @@ function Offers() {
         )}
 
         <div className="offers-grid">
-          {ACTIVE_DISCOUNTS.map(offer => (
+          {activeDiscounts.map(offer => (
             <div key={offer.id} className="offer-card">
               <div className="offer-card-top">
                 <span className="offer-badge active-live-badge">

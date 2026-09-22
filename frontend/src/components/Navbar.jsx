@@ -53,23 +53,6 @@ function Navbar({ user, onLogout }) {
           </NavLink>
 
           <NavLink
-            to="/offers"
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            onClick={closeMenu}
-          >
-            Offers
-            <span className="nav-discount-badge">%</span>
-          </NavLink>
-
-          <NavLink
-            to="/faq"
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            onClick={closeMenu}
-          >
-            FAQ
-          </NavLink>
-
-          <NavLink
             to="/contact"
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             onClick={closeMenu}

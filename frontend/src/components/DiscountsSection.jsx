@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { discountAPI, farmhouseAPI } from '../api/axiosInstance';
 import './DiscountsSection.css';
@@ -50,11 +50,46 @@ const formatDiscountDate = (date) => date
   })
   : null;
 
+/** Returns true if the discount's validTo date has already passed today */
+const isOfferExpired = (discount) => {
+  if (!discount.validTo) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(`${discount.validTo}T00:00:00`);
+  return expiry < today;
+};
+
+/** Returns true if the discount has not started yet */
+const isOfferNotStarted = (discount) => {
+  if (!discount.validFrom) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(`${discount.validFrom}T00:00:00`);
+  return start > today;
+};
+
+/** Compute a human-readable status for owner/admin management view */
+const getOfferStatus = (discount) => {
+  if (isOfferExpired(discount)) return 'EXPIRED';
+  if (discount.isActive === false) return 'INACTIVE';
+  if (isOfferNotStarted(discount)) return 'UPCOMING';
+  return 'ACTIVE';
+};
+
+// Status badge styling config
+const STATUS_CONFIG = {
+  ACTIVE:   { label: '🟢 Active',   color: '#16a34a', bg: '#dcfce7', border: '#bbf7d0' },
+  EXPIRED:  { label: '🔴 Expired',  color: '#dc2626', bg: '#fee2e2', border: '#fecaca' },
+  INACTIVE: { label: '⏸ Inactive', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb' },
+  UPCOMING: { label: '🕐 Upcoming', color: '#d97706', bg: '#fef3c7', border: '#fde68a' },
+};
+
 export default function DiscountsSection({ onOffersCount }) {
   const [discounts, setDiscounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [userFarmhouses, setUserFarmhouses] = useState([]);
+  const [togglingId, setTogglingId] = useState(null);
 
   // Owner/Admin Discount Modal state
   const [showModal, setShowModal] = useState(false);
@@ -77,9 +112,19 @@ export default function DiscountsSection({ onOffersCount }) {
 
   const isOwnerOrAdmin = user && (user.role === 'OWNER' || user.role === 'ADMIN' || user.role === 'SUPERADMIN');
 
-  const loadDiscounts = useCallback(async () => {
+  // ── Load discounts ────────────────────────────────────────────────────────
+  // Owners/Admins load ALL their discounts so they can manage expired/inactive ones.
+  // Regular users load only currently active/valid discounts via public endpoint.
+  const loadDiscounts = useCallback(async (currentUser) => {
     try {
-      const res = await discountAPI.getActiveDiscounts();
+      let res;
+      if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SUPERADMIN')) {
+        res = await discountAPI.getAllDiscounts(currentUser.id);
+      } else if (currentUser && currentUser.role === 'OWNER') {
+        res = await discountAPI.getDiscountsByOwner(currentUser.id, currentUser.id);
+      } else {
+        res = await discountAPI.getActiveDiscounts();
+      }
       if (res.data && res.data.success && Array.isArray(res.data.discounts)) {
         setDiscounts(res.data.discounts);
       } else {
@@ -94,27 +139,51 @@ export default function DiscountsSection({ onOffersCount }) {
   }, []);
 
   useEffect(() => {
+    let currentUser = null;
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       try {
-        const u = JSON.parse(savedUser);
-        setUser(u);
-        if (u.role === 'OWNER') {
-          farmhouseAPI.getFarmHousesByOwner(u.id)
+        currentUser = JSON.parse(savedUser);
+        setUser(currentUser);
+        if (currentUser.role === 'OWNER') {
+          farmhouseAPI.getFarmHousesByOwner(currentUser.id)
             .then((r) => r.data?.success && setUserFarmhouses(r.data.farmhouses || []))
             .catch(() => {});
-        } else if (u.role === 'ADMIN' || u.role === 'SUPERADMIN') {
+        } else if (currentUser.role === 'ADMIN' || currentUser.role === 'SUPERADMIN') {
           farmhouseAPI.getAllFarmHouses(0, 50)
             .then((r) => r.data?.success && setUserFarmhouses(r.data.farmhouses || []))
             .catch(() => {});
         }
       } catch (e) {
+        currentUser = null;
         setUser(null);
       }
     }
-    loadDiscounts();
+    loadDiscounts(currentUser);
   }, [loadDiscounts]);
 
+  // ── Toggle Active / Inactive ──────────────────────────────────────────────
+  const handleToggleActive = async (discount) => {
+    if (!user) return;
+    setTogglingId(discount.id);
+    try {
+      await discountAPI.updateDiscount(
+        discount.id,
+        { isActive: !discount.isActive },
+        user.id
+      );
+      // Optimistic local update
+      setDiscounts((prev) =>
+        prev.map((d) => d.id === discount.id ? { ...d, isActive: !d.isActive } : d)
+      );
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update discount status.');
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  // ── Modal helpers ─────────────────────────────────────────────────────────
   const openCreateModal = (defaultCategory = 'POOL_PARTY') => {
     setEditingDiscount(null);
     setDiscountForm({
@@ -158,7 +227,6 @@ export default function DiscountsSection({ onOffersCount }) {
       setFormSaving(false);
       return;
     }
-
     try {
       const payload = {
         title: discountForm.title || `${discountForm.discountPercent}% OFF on ${discountForm.farmhouseType.replace('_', ' ')}`,
@@ -171,7 +239,6 @@ export default function DiscountsSection({ onOffersCount }) {
         validTo: discountForm.validTo || null,
         isActive: discountForm.isActive !== false,
       };
-
       if (editingDiscount) {
         await discountAPI.updateDiscount(editingDiscount.id, payload, user.id);
         setFormMsg({ type: 'success', text: 'Discount updated successfully!' });
@@ -179,8 +246,7 @@ export default function DiscountsSection({ onOffersCount }) {
         await discountAPI.createDiscount(payload, user.id);
         setFormMsg({ type: 'success', text: 'Discount created and published!' });
       }
-
-      await loadDiscounts();
+      await loadDiscounts(user);
       setTimeout(() => {
         setShowModal(false);
         setFormMsg({ type: '', text: '' });
@@ -199,29 +265,37 @@ export default function DiscountsSection({ onOffersCount }) {
     if (!window.confirm('Delete this discount?')) return;
     try {
       await discountAPI.deleteDiscount(id, user.id);
-      loadDiscounts();
+      loadDiscounts(user);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete discount');
     }
   };
 
-  // Filter for genuine active offers (positive discount percent)
-  const activeOffers = discounts.filter(
-    (d) => d && d.isActive !== false && Number(d.discountPercent) > 0
+  // ── Compute display data ──────────────────────────────────────────────────
+
+  // PUBLIC view: only active + within date window + positive percent
+  const publicActiveOffers = discounts.filter((d) =>
+    d &&
+    d.isActive !== false &&
+    Number(d.discountPercent) > 0 &&
+    !isOfferExpired(d) &&
+    !isOfferNotStarted(d)
   );
+
+  // OWNER/ADMIN management view: all their discounts
+  const managedDiscounts = isOwnerOrAdmin ? discounts : [];
 
   useEffect(() => {
     if (typeof onOffersCount === 'function') {
-      onOffersCount(activeOffers.length);
+      onOffersCount(publicActiveOffers.length);
     }
-  }, [activeOffers.length, onOffersCount]);
+  }, [publicActiveOffers.length, onOffersCount]);
 
-  // ONLY build cards for farmhouse types that have an active offer
-  const displayCards = activeOffers.map((activeDiscount) => {
+  // Build display cards for public user view
+  const displayCards = publicActiveOffers.map((activeDiscount) => {
     const typeKey = activeDiscount.farmhouseType || 'ALL';
     const meta = TYPE_META[typeKey] || TYPE_META.ALL;
     const discountPercent = Number(activeDiscount.discountPercent);
-
     return {
       typeKey,
       meta,
@@ -238,7 +312,7 @@ export default function DiscountsSection({ onOffersCount }) {
     };
   });
 
-  // If not loading, no active offers exist, and user is not an admin/owner, hide the section entirely
+  // If not loading, no active offers, and user is not admin/owner -> hide section
   if (!loading && displayCards.length === 0 && !isOwnerOrAdmin) {
     return null;
   }
@@ -249,7 +323,7 @@ export default function DiscountsSection({ onOffersCount }) {
       <div className="ds-blob ds-blob-1" />
       <div className="ds-blob ds-blob-2" />
 
-      {/* Header Intro */}
+      {/* Header */}
       <div className="section-intro">
         <div className="ds-header-top">
           <a
@@ -286,14 +360,113 @@ export default function DiscountsSection({ onOffersCount }) {
         <p>Explore exclusive percentage discounts currently active for farmhouse stays.</p>
       </div>
 
-      {/* ── SHOW ACTIVE OFFERS OR ADMIN EMPTY STATE ── */}
+      {/* ── OWNER / ADMIN MANAGEMENT TABLE ── */}
+      {isOwnerOrAdmin && managedDiscounts.length > 0 && (
+        <div className="ds-manage-panel">
+          <h3 className="ds-manage-title">📋 Your Discount Offers</h3>
+          <div className="ds-manage-table-wrap">
+            <table className="ds-manage-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Type</th>
+                  <th>%</th>
+                  <th>Valid From</th>
+                  <th>Valid To</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {managedDiscounts.map((d) => {
+                  const status = getOfferStatus(d);
+                  const statusCfg = STATUS_CONFIG[status];
+                  const meta = TYPE_META[d.farmhouseType] || TYPE_META.ALL;
+                  const isToggling = togglingId === d.id;
+                  return (
+                    <tr
+                      key={d.id}
+                      className={`ds-manage-row${status === 'EXPIRED' ? ' expired-row' : status === 'INACTIVE' ? ' inactive-row' : ''}`}
+                    >
+                      <td className="ds-col-title">
+                        <span className="ds-col-emoji">{meta.emoji}</span>
+                        <span>{d.title}</span>
+                      </td>
+                      <td><span className="ds-type-chip">{meta.label}</span></td>
+                      <td><strong>{d.discountPercent}%</strong></td>
+                      <td>{formatDiscountDate(d.validFrom) || <span className="ds-null-cell">—</span>}</td>
+                      <td>
+                        {formatDiscountDate(d.validTo) || <span className="ds-null-cell">Ongoing</span>}
+                        {status === 'EXPIRED' && <span className="ds-expired-tag"> Ended</span>}
+                      </td>
+                      <td>
+                        <span
+                          className="ds-status-badge"
+                          style={{
+                            color: statusCfg.color,
+                            background: statusCfg.bg,
+                            border: `1px solid ${statusCfg.border}`,
+                          }}
+                        >
+                          {statusCfg.label}
+                        </span>
+                      </td>
+                      <td className="ds-col-actions">
+                        <button
+                          type="button"
+                          className={`ds-toggle-btn${d.isActive ? ' active' : ' inactive'}`}
+                          title={d.isActive ? 'Click to Deactivate' : 'Click to Activate'}
+                          onClick={() => handleToggleActive(d)}
+                          disabled={isToggling}
+                        >
+                          {isToggling ? '⏳' : d.isActive ? '⏸ Deactivate' : '▶ Activate'}
+                        </button>
+                        <button
+                          type="button"
+                          className="ds-mini-btn edit"
+                          title="Edit Discount"
+                          onClick={() => openEditModal(d)}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="ds-mini-btn delete"
+                          title="Delete discount"
+                          onClick={() => handleDeleteDiscount(d.id)}
+                        >
+                          🗑️
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="ds-manage-hint">
+            💡 Only <strong>Active</strong> offers within their validity dates are visible to guests.
+            Expired offers are automatically hidden from users.
+          </p>
+        </div>
+      )}
+
+      {/* Label for guest view when admin/owner is logged in */}
+      {isOwnerOrAdmin && (
+        <h3 className="ds-manage-title" style={{ marginBottom: '1rem', marginTop: '2rem' }}>
+          👥 Guest View (Active Offers)
+        </h3>
+      )}
+
+      {/* ── PUBLIC ACTIVE OFFER CARDS ── */}
       {displayCards.length === 0 ? (
         <div className="ds-no-deals">
           <span>🏷️</span>
           <h3>No Active Discount Offers</h3>
           <p>
-            There are currently no active offers. When you publish a discount for a farmhouse type,
-            only that type of discount will be displayed to guests.
+            {isOwnerOrAdmin
+              ? 'No active offers are visible to guests right now. Activate an offer above or create a new one.'
+              : 'There are currently no active offers. Check back soon!'}
           </p>
           {isOwnerOrAdmin && (
             <button
@@ -320,7 +493,7 @@ export default function DiscountsSection({ onOffersCount }) {
                 <span className="ds-badge-off">OFF</span>
               </div>
 
-              {/* Owner/Admin Quick Edit / Set Buttons */}
+              {/* Owner/Admin Quick Edit / Delete */}
               {isOwnerOrAdmin && (
                 <div className="ds-card-admin-actions">
                   <button
@@ -351,7 +524,6 @@ export default function DiscountsSection({ onOffersCount }) {
                 </div>
               </div>
 
-              {/* Specific Property Tag if applicable */}
               {card.farmhouseName && (
                 <div className="ds-specific-farmhouse">
                   🏡 Applies to: <strong>{card.farmhouseName}</strong>
@@ -364,14 +536,12 @@ export default function DiscountsSection({ onOffersCount }) {
                 </div>
               )}
 
-              {/* Special Perk if set */}
               {card.specialOffer && (
                 <div className="ds-offer-tag">
                   🎁 {card.specialOffer}
                 </div>
               )}
 
-              {/* Direct Action Button */}
               <div className="ds-type-card-footer">
                 <Link
                   to={
@@ -427,7 +597,7 @@ export default function DiscountsSection({ onOffersCount }) {
                 </div>
 
                 <div className="ds-form-field">
-                  <label>2. Discount % (Set 0 for No Discount) *</label>
+                  <label>2. Discount % *</label>
                   <div className="ds-percent-input-wrap">
                     <input
                       type="number"
@@ -442,15 +612,13 @@ export default function DiscountsSection({ onOffersCount }) {
                       {Number(discountForm.discountPercent) === 0 ? 'NO DISC' : '% OFF'}
                     </span>
                   </div>
-
-                  {/* Quick percentage selector presets */}
                   <div className="ds-presets-row">
                     <button
                       type="button"
                       className={`ds-preset-chip ${discountForm.discountPercent === '0' ? 'active zero' : ''}`}
                       onClick={() => setDiscountForm({ ...discountForm, discountPercent: '0' })}
                     >
-                      🚫 0% (No Discount)
+                      🚫 0%
                     </button>
                     {['10', '15', '20', '25', '30'].map((p) => (
                       <button
@@ -475,7 +643,6 @@ export default function DiscountsSection({ onOffersCount }) {
                     onChange={(e) => setDiscountForm({ ...discountForm, validFrom: e.target.value })}
                   />
                 </div>
-
                 <div className="ds-form-field">
                   <label>4. Valid To Date (Optional)</label>
                   <input
@@ -485,6 +652,18 @@ export default function DiscountsSection({ onOffersCount }) {
                     onChange={(e) => setDiscountForm({ ...discountForm, validTo: e.target.value })}
                   />
                 </div>
+              </div>
+
+              {/* Active/Inactive toggle inside modal */}
+              <div className="ds-form-field ds-active-toggle-field">
+                <label>5. Offer Status</label>
+                <button
+                  type="button"
+                  className={`ds-status-toggle-btn${discountForm.isActive ? ' on' : ''}`}
+                  onClick={() => setDiscountForm({ ...discountForm, isActive: !discountForm.isActive })}
+                >
+                  {discountForm.isActive ? '🟢 Active — Visible to guests' : '⏸ Inactive — Hidden from guests'}
+                </button>
               </div>
 
               {userFarmhouses.length > 0 && (

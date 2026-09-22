@@ -106,6 +106,15 @@ const PACKING_DATA = {
   ]
 };
 
+const isDiscountCurrentlyValid = (discount) => {
+  if (!discount || discount.isActive === false || Number(discount.discountPercent) <= 0) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (discount.validFrom && new Date(`${discount.validFrom}T00:00:00`) > today) return false;
+  if (discount.validTo && new Date(`${discount.validTo}T00:00:00`) < today) return false;
+  return true;
+};
+
 function FarmHouseDetail({ user }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -140,7 +149,9 @@ function FarmHouseDetail({ user }) {
   // Discount state
   const [discounts, setDiscounts] = useState([]);
   const [appliedDiscount, setAppliedDiscount] = useState(
-    location.state?.appliedDiscount || null
+    isDiscountCurrentlyValid(location.state?.appliedDiscount)
+      ? location.state.appliedDiscount
+      : null
   );
 
   // Review states
@@ -159,10 +170,11 @@ function FarmHouseDetail({ user }) {
     try {
       const res = await discountAPI.getActiveDiscounts();
       if (res.data?.success && Array.isArray(res.data.discounts)) {
-        setDiscounts(res.data.discounts);
+        const validDiscounts = res.data.discounts.filter(isDiscountCurrentlyValid);
+        setDiscounts(validDiscounts);
         if (!location.state?.appliedDiscount) {
-          const match = res.data.discounts.find(
-            d => d && d.isActive !== false && Number(d.discountPercent) > 0 &&
+          const match = validDiscounts.find(
+            d =>
             (String(d.farmhouseId) === String(id) || d.farmhouseType === 'ALL')
           );
           if (match) setAppliedDiscount(match);
