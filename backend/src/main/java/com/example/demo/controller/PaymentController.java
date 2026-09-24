@@ -1,11 +1,15 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.PaymentDTO;
+import com.example.demo.dto.PaymentOrderRequest;
+import com.example.demo.dto.PaymentOrderResponse;
+import com.example.demo.dto.PaymentVerifyRequest;
 import com.example.demo.service.PaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,9 +21,51 @@ public class PaymentController {
     
     @Autowired
     private PaymentService paymentService;
+
+    /**
+     * Create Razorpay / Payment Order
+     * POST /api/payments/create-order
+     */
+    @PostMapping("/create-order")
+    public ResponseEntity<?> createPaymentOrder(@RequestBody PaymentOrderRequest request) {
+        try {
+            PaymentOrderResponse orderResponse = paymentService.createPaymentOrder(request);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Payment order created successfully");
+            response.put("data", orderResponse);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
+
+    /**
+     * Verify Razorpay Payment Signature, confirm booking, and send Receipt PDF & WhatsApp
+     * POST /api/payments/verify
+     */
+    @PostMapping("/verify")
+    public ResponseEntity<?> verifyPayment(@RequestBody PaymentVerifyRequest request) {
+        try {
+            PaymentDTO payment = paymentService.verifyPayment(request);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Payment verified successfully. Booking confirmed and receipt dispatched.");
+            response.put("payment", payment);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
     
     /**
-     * Create payment for booking
+     * Create payment for booking (legacy)
      * POST /api/payments
      */
     @PostMapping
@@ -43,7 +89,7 @@ public class PaymentController {
     }
     
     /**
-     * Process payment
+     * Process simulated payment
      * POST /api/payments/:id/process
      */
     @PostMapping("/{id}/process")

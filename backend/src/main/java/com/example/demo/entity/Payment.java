@@ -31,6 +31,16 @@ public class Payment {
     
     private String paymentMethod; // CARD, UPI, NET_BANKING, WALLET
     
+    private String gateway; // RAZORPAY, SIMULATED, etc.
+    
+    private String orderId; // Razorpay order_id
+    
+    private String paymentId; // Razorpay payment_id
+    
+    private String signature; // Razorpay signature
+    
+    private LocalDateTime paidAt;
+    
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
     

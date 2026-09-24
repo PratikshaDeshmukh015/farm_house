@@ -3,6 +3,7 @@ package com.example.demo.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -14,4 +15,9 @@ public class PaymentDTO {
     private String paymentStatus;
     private String transactionId;
     private String paymentMethod;
+    private String gateway;
+    private String orderId;
+    private String paymentId;
+    private String signature;
+    private LocalDateTime paidAt;
 }

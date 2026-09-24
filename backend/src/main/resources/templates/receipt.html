@@ -1,0 +1,268 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Booking Receipt</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .receipt-container {
+            width: 100%;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .header-table {
+            width: 100%;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #16a34a;
+            padding-bottom: 15px;
+        }
+        .brand-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #166534;
+            margin: 0;
+        }
+        .brand-tagline {
+            font-size: 11px;
+            color: #475569;
+            margin-top: 3px;
+        }
+        .receipt-badge {
+            text-align: right;
+        }
+        .badge-pill {
+            background-color: #dcfce7;
+            color: #15803d;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 13px;
+            display: inline-block;
+            border: 1px solid #86efac;
+        }
+        .meta-table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .meta-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px 14px;
+        }
+        .meta-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #64748b;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        .meta-val {
+            font-size: 13px;
+            font-weight: bold;
+            color: #0f172a;
+            margin-top: 2px;
+        }
+        .section-heading {
+            font-size: 14px;
+            font-weight: bold;
+            color: #166534;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 5px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .details-table th {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-size: 11px;
+            text-transform: uppercase;
+            padding: 8px 10px;
+            text-align: left;
+            border: 1px solid #cbd5e1;
+        }
+        .details-table td {
+            padding: 9px 10px;
+            border: 1px solid #e2e8f0;
+            font-size: 12px;
+        }
+        .details-table tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+        .totals-table {
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+        }
+        .totals-table td {
+            padding: 6px 10px;
+        }
+        .grand-total-row td {
+            background-color: #f0fdf4;
+            border-top: 2px solid #16a34a;
+            border-bottom: 2px solid #16a34a;
+            font-size: 15px;
+            font-weight: bold;
+            color: #166534;
+        }
+        .paid-stamp {
+            border: 2px dashed #16a34a;
+            color: #16a34a;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 6px 18px;
+            display: inline-block;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transform: rotate(-5deg);
+        }
+        .footer {
+            margin-top: 35px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 10px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+<div class="receipt-container">
+    <!-- Header -->
+    <table class="header-table">
+        <tr>
+            <td style="vertical-align: middle;">
+                <div class="brand-title">🏡 FarmHouse Stays</div>
+                <div class="brand-tagline">Relax &middot; Reconnect &middot; Rejuvenate</div>
+            </td>
+            <td class="receipt-badge" style="vertical-align: middle;">
+                <span class="badge-pill">PAYMENT CONFIRMED</span>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Receipt Meta -->
+    <table class="meta-table">
+        <tr>
+            <td style="width: 32%; vertical-align: top;">
+                <div class="meta-box">
+                    <div class="meta-label">Receipt Number</div>
+                    <div class="meta-val" th:text="${receiptNumber}">REC-2026-0001</div>
+                </div>
+            </td>
+            <td style="width: 2%;"></td>
+            <td style="width: 32%; vertical-align: top;">
+                <div class="meta-box">
+                    <div class="meta-label">Booking Reference</div>
+                    <div class="meta-val" th:text="${bookingNumber}">FH-2026-001</div>
+                </div>
+            </td>
+            <td style="width: 2%;"></td>
+            <td style="width: 32%; vertical-align: top;">
+                <div class="meta-box">
+                    <div class="meta-label">Date &amp; Time</div>
+                    <div class="meta-val" th:text="${generatedDate}">20 Oct 2026</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Guest Information -->
+    <div class="section-heading">Guest &amp; Contact Details</div>
+    <table class="details-table">
+        <tr>
+            <th style="width: 25%;">Guest Name</th>
+            <td style="width: 25%; font-weight: bold;" th:text="${customerName}">John Doe</td>
+            <th style="width: 25%;">Phone Number</th>
+            <td style="width: 25%;" th:text="${customerPhone}">+91 9876543210</td>
+        </tr>
+        <tr>
+            <th>Email Address</th>
+            <td th:text="${customerEmail}">guest@example.com</td>
+            <th>Guests Count</th>
+            <td th:text="${numberOfGuests} + ' Guests'">4 Guests</td>
+        </tr>
+    </table>
+
+    <!-- Property Details -->
+    <div class="section-heading">Farmhouse Reservation Details</div>
+    <table class="details-table">
+        <tr>
+            <th style="width: 25%;">Farmhouse</th>
+            <td style="width: 75%; font-weight: bold; font-size: 13px;" colspan="3" th:text="${farmHouseName}">Green Valley Villa</td>
+        </tr>
+        <tr>
+            <th>Location</th>
+            <td colspan="3" th:text="${farmHouseLocation}">Lonavala, Maharashtra</td>
+        </tr>
+        <tr>
+            <th>Check-in Date</th>
+            <td th:text="${checkInDate}">2026-10-20</td>
+            <th>Check-out Date</th>
+            <td th:text="${checkOutDate}">2026-10-22</td>
+        </tr>
+        <tr>
+            <th>Time Slot</th>
+            <td th:text="${timeSlot}">FULL_DAY</td>
+            <th>Duration</th>
+            <td th:text="${totalDays} + ' Night(s)'">2 Night(s)</td>
+        </tr>
+    </table>
+
+    <!-- Payment Summary -->
+    <div class="section-heading">Payment Breakdown</div>
+    <table class="totals-table">
+        <tr>
+            <td style="width: 60%; vertical-align: middle;">
+                <div class="paid-stamp">PAID IN FULL</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
+                    <strong>Payment ID:</strong> <span th:text="${paymentId}">pay_xxxxxx</span><br />
+                    <strong>Gateway:</strong> <span th:text="${gateway}">Razorpay</span>
+                </div>
+            </td>
+            <td style="width: 40%; vertical-align: top;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="color: #64748b; font-size: 12px;">Base Tariff:</td>
+                        <td style="text-align: right; font-weight: bold;" th:text="'Rs. ' + ${basePrice}">Rs. 8,000</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #64748b; font-size: 12px;">Tax &amp; Service Fee:</td>
+                        <td style="text-align: right; font-weight: bold;">Included</td>
+                    </tr>
+                    <tr class="grand-total-row">
+                        <td>Total Paid:</td>
+                        <td style="text-align: right;" th:text="'Rs. ' + ${totalAmount}">Rs. 8,000</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Footer Terms -->
+    <div class="footer">
+        <p>Thank you for choosing <strong>FarmHouse Stays</strong>! Please present this receipt or your Booking ID at check-in.</p>
+        <p>For 24/7 guest assistance: support@farmhouse.com &middot; +91 98765 43210 &middot; www.farmhousestays.in</p>
+    </div>
+</div>
+</body>
+</html>
