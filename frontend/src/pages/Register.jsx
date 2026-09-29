@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { authAPI } from '../api/axiosInstance';
 import './Login.css';
 
-function Register() {
+function Register({ onLoginSuccess }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -14,6 +15,7 @@ function Register() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -41,6 +43,29 @@ function Register() {
       setError(err.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      if (!credentialResponse.credential) {
+        throw new Error('Google did not return an ID token.');
+      }
+      const response = await authAPI.googleLogin(credentialResponse.credential);
+      if (response.data.success) {
+        const { user, token } = response.data;
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('userId', user.id);
+        localStorage.setItem('token', token);
+        onLoginSuccess?.(user);
+        navigate('/');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Google sign-in failed.');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -159,22 +184,19 @@ function Register() {
               </div>
 
               <div className="auth-social-buttons">
-                <button
-                  type="button"
-                  className="social-btn google-btn"
-                  onClick={() => alert("Google login integration will be linked to OAuth.")}
-                >
-                  <span className="social-icon">🔴</span>
-                  <span>Google</span>
-                </button>
-                <button
-                  type="button"
-                  className="social-btn facebook-btn"
-                  onClick={() => alert("Facebook login integration will be linked to OAuth.")}
-                >
-                  <span className="social-icon">🔵</span>
-                  <span>Facebook</span>
-                </button>
+                {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+                  <div className="auth-google-button" aria-busy={googleLoading}>
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => setError('Google sign-in was cancelled or failed.')}
+                      text="continue_with"
+                      shape="rectangular"
+                      width="260"
+                    />
+                  </div>
+                ) : (
+                  <p className="auth-google-unconfigured">Google sign-in is not configured.</p>
+                )}
               </div>
             </form>
 

@@ -19,6 +19,8 @@ export const authAPI = {
     axios.post(`${API_BASE_URL}/auth/register`, userData),
   login: (email, password) =>
     axios.post(`${API_BASE_URL}/auth/login`, { email, password }),
+  googleLogin: (token) =>
+    axios.post(`${API_BASE_URL}/auth/google`, { token }),
   verifyEmail: (userId) =>
     axios.post(`${API_BASE_URL}/auth/verify/${userId}`),
 };

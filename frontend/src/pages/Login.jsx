@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { authAPI } from '../api/axiosInstance';
 import './Login.css';
 
@@ -9,10 +10,21 @@ function Login({ onLoginSuccess }) {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const redirectTo = location.state?.redirectTo || '/';
+
+  const finishLogin = (data) => {
+    localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('userId', data.user.id);
+    localStorage.setItem('token', data.token);
+    if (onLoginSuccess) {
+      onLoginSuccess(data.user);
+    }
+    navigate(redirectTo, { replace: true });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,18 +34,30 @@ function Login({ onLoginSuccess }) {
     try {
       const response = await authAPI.login(email, password);
       if (response.data.success) {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        localStorage.setItem('userId', response.data.user.id);
-        localStorage.setItem('token', response.data.token);
-        if (onLoginSuccess) {
-          onLoginSuccess(response.data.user);
-        }
-        navigate(redirectTo, { replace: true });
+        finishLogin(response.data);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      if (!credentialResponse.credential) {
+        throw new Error('Google did not return an ID token.');
+      }
+      const response = await authAPI.googleLogin(credentialResponse.credential);
+      if (response.data.success) {
+        finishLogin(response.data);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Google login failed.');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -131,22 +155,19 @@ function Login({ onLoginSuccess }) {
               </div>
 
               <div className="auth-social-buttons">
-                <button
-                  type="button"
-                  className="social-btn google-btn"
-                  onClick={() => alert("Google login integration will be linked to OAuth.")}
-                >
-                  <span className="social-icon">🔴</span>
-                  <span>Google</span>
-                </button>
-                <button
-                  type="button"
-                  className="social-btn facebook-btn"
-                  onClick={() => alert("Facebook login integration will be linked to OAuth.")}
-                >
-                  <span className="social-icon">🔵</span>
-                  <span>Facebook</span>
-                </button>
+                {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+                  <div className="auth-google-button" aria-busy={googleLoading}>
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => setError('Google sign-in was cancelled or failed.')}
+                      text="continue_with"
+                      shape="rectangular"
+                      width="260"
+                    />
+                  </div>
+                ) : (
+                  <p className="auth-google-unconfigured">Google sign-in is not configured.</p>
+                )}
               </div>
             </form>
 

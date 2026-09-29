@@ -97,7 +97,7 @@ function App() {
 
           {/* Authentication Routes */}
           <Route path="/login" element={user ? <Navigate to="/" /> : <Login onLoginSuccess={setUser} />} />
-          <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
+          <Route path="/register" element={user ? <Navigate to="/" /> : <Register onLoginSuccess={setUser} />} />
           
           {/* Protected Routes */}
           <Route 
