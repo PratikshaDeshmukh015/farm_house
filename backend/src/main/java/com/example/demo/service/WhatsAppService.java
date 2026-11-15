@@ -29,8 +29,8 @@ public class WhatsAppService {
     @Value("${whatsapp.access-token:}")
     private String accessToken;
 
-    @Value("${server.port:8081}")
-    private String serverPort;
+    @Value("${app.backend-url:http://localhost:8080}")
+    private String backendUrl;
 
     @Autowired(required = false)
     private NotificationLogRepository notificationLogRepository;
@@ -66,7 +66,7 @@ public class WhatsAppService {
             "📅 *Check-out:* %s\n" +
             "👥 *Guests:* %s\n" +
             "💰 *Amount Paid:* ₹%.2f\n\n" +
-            "🔗 *Download Receipt:* http://localhost:%s/api/receipts/%d\n\n" +
+            "🔗 *Download Receipt:* %s/api/receipts/%d\n\n" +
             "Thank you for choosing FarmHouse Stays! Have a wonderful stay ✨",
             user.getName(),
             receiptNumber,
@@ -75,7 +75,7 @@ public class WhatsAppService {
             booking.getEndDate(),
             booking.getNumberOfGuests() != null ? booking.getNumberOfGuests() : 1,
             booking.getTotalPrice() != null ? booking.getTotalPrice() : 0.0,
-            serverPort,
+            backendUrl,
             booking.getId()
         );
 
