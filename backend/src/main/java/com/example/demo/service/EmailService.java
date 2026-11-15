@@ -21,7 +21,7 @@ public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
-    @Autowired
+    @Autowired(required = false)
     private JavaMailSender mailSender;
 
     @Autowired(required = false)
@@ -32,6 +32,10 @@ public class EmailService {
      */
     public void sendBookingConfirmationEmail(User user, Booking booking) {
         if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
+            return;
+        }
+        if (mailSender == null) {
+            log.warn("Booking confirmation email skipped because SMTP is not configured");
             return;
         }
 
@@ -54,6 +58,10 @@ public class EmailService {
      */
     public void sendReceiptEmail(User user, Booking booking, byte[] pdfBytes, String receiptNumber) {
         if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
+            return;
+        }
+        if (mailSender == null) {
+            log.warn("Receipt email skipped because SMTP is not configured");
             return;
         }
 

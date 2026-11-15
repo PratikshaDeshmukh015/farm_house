@@ -28,7 +28,7 @@ public class Review {
     @Column(nullable = false)
     private Integer rating; // 1 to 5
     
-    @Column(columnDefinition = "LONGTEXT", nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String comment;
     
     @Column(name = "created_at", nullable = false, updatable = false)

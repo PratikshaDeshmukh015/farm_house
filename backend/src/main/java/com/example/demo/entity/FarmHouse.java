@@ -22,7 +22,7 @@ public class FarmHouse {
     @Column(nullable = false)
     private String location;
     
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "TEXT")
     private String description;
     
     @Column(nullable = false)
@@ -42,12 +42,12 @@ public class FarmHouse {
     private Integer bedrooms;
     private Integer bathrooms;
     
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "TEXT")
     private String amenities; // JSON format: ["WiFi", "Pool", "Garden", "Party Hall"]
     
     private String imageUrl;
 
-    @Column(name = "image_urls", columnDefinition = "LONGTEXT")
+    @Column(name = "image_urls", columnDefinition = "TEXT")
     private String imageUrls; // JSON format: ["https://...", "https://..."]
     
     @Column(name = "created_at", nullable = false, updatable = false)

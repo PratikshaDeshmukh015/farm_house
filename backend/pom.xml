@@ -38,11 +38,13 @@
         </dependency>
 
         <!-- MySQL Driver -->
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <scope>runtime</scope>
-        </dependency>
+      
+<!-- PostgreSQL Driver -->
+<dependency>
+    <groupId>org.postgresql</groupId>
+    <artifactId>postgresql</artifactId>
+    <scope>runtime</scope>
+</dependency>
 
         <!-- H2 Database -->
         <dependency>
