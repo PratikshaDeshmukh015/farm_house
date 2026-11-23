@@ -12,7 +12,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reviews")
-@CrossOrigin(origins = "*") // Assuming global CORS is fine for dev
 @RequiredArgsConstructor
 public class ReviewController {
 
