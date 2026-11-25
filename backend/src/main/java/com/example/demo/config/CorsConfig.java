@@ -50,10 +50,10 @@ public class CorsConfig {
         ));
         configuration.setAllowedHeaders(Arrays.asList(
             "Content-Type", "Authorization", "Accept", "Origin",
-            "X-Requested-With", "user-id", "owner-id"
+            "X-Requested-With", "user-id", "owner-id", "requester-id"
         ));
         configuration.setExposedHeaders(Arrays.asList("Location"));
-        configuration.setAllowCredentials(false);
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
