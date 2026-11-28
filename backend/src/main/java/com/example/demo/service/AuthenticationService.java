@@ -4,18 +4,30 @@ import com.example.demo.dto.UserDTO;
 import com.example.demo.dto.UserRegistrationDTO;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.Optional;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Collections;
+import java.util.UUID;
 
 @Service
 public class AuthenticationService {
     
     @Autowired
     private UserRepository userRepository;
+
+    @Value("${google.client-id:}")
+    private String googleClientId;
     
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     
@@ -78,6 +90,62 @@ public class AuthenticationService {
         response.put("token", generateToken(user)); // Simple token generation
         
         return response;
+    }
+
+    public Map<String, Object> loginWithGoogle(String token) {
+        if (token == null || token.isBlank()) {
+            throw new RuntimeException("Google credential is required");
+        }
+        if (googleClientId == null || googleClientId.isBlank()) {
+            throw new IllegalStateException("Google sign-in is not configured on the server");
+        }
+
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(), GsonFactory.getDefaultInstance())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+            GoogleIdToken idToken = verifier.verify(token);
+            if (idToken == null) {
+                throw new RuntimeException("Invalid Google credential");
+            }
+
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            if (!Boolean.TRUE.equals(payload.getEmailVerified())) {
+                throw new RuntimeException("Google email must be verified");
+            }
+
+            String email = payload.getEmail();
+            if (email == null || email.isBlank()) {
+                throw new RuntimeException("Google account did not provide an email address");
+            }
+            User user = userRepository.findByEmail(email).orElseGet(() -> {
+                User newUser = new User();
+                Object googleName = payload.get("name");
+                newUser.setName(googleName == null || String.valueOf(googleName).isBlank()
+                        ? email : String.valueOf(googleName));
+                newUser.setEmail(email);
+                newUser.setPhone("Not provided");
+                newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+                newUser.setRole(User.Role.CUSTOMER);
+                newUser.setIsVerified(true);
+                newUser.setIsBlocked(false);
+                return userRepository.save(newUser);
+            });
+
+            if (Boolean.TRUE.equals(user.getIsBlocked())) {
+                throw new RuntimeException("User account is blocked");
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Login successful");
+            response.put("user", convertToDTO(user));
+            response.put("token", generateToken(user));
+            return response;
+        } catch (GeneralSecurityException | IOException e) {
+            throw new RuntimeException("Unable to verify Google credential", e);
+        }
     }
     
     /**

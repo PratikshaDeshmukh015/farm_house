@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { discountAPI, farmhouseAPI } from '../api/axiosInstance';
 import './DiscountsSection.css';
@@ -43,7 +43,7 @@ const TYPE_META = {
 };
 
 const formatDiscountDate = (date) => date
-  ? new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+  ? new Date(`${date}T00:00:00`).toLocaleDateString('en-IN', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -70,8 +70,9 @@ const isOfferNotStarted = (discount) => {
 
 /** Compute a human-readable status for owner/admin management view */
 const getOfferStatus = (discount) => {
-  if (isOfferExpired(discount)) return 'EXPIRED';
+  if (discount.status) return discount.status;
   if (discount.isActive === false) return 'INACTIVE';
+  if (isOfferExpired(discount)) return 'EXPIRED';
   if (isOfferNotStarted(discount)) return 'UPCOMING';
   return 'ACTIVE';
 };
@@ -90,6 +91,7 @@ export default function DiscountsSection({ onOffersCount }) {
   const [user, setUser] = useState(null);
   const [userFarmhouses, setUserFarmhouses] = useState([]);
   const [togglingId, setTogglingId] = useState(null);
+  const [copiedCode, setCopiedCode] = useState(null);
 
   // Owner/Admin Discount Modal state
   const [showModal, setShowModal] = useState(false);
@@ -99,9 +101,14 @@ export default function DiscountsSection({ onOffersCount }) {
   const [discountForm, setDiscountForm] = useState({
     title: '',
     description: '',
+    discountCode: '',
+    discountType: 'PERCENTAGE',
+    discountPercent: '20',
+    discountValue: '',
+    maxDiscountAmount: '',
+    minBookingAmount: '',
     farmhouseType: 'POOL_PARTY',
     farmhouseId: '',
-    discountPercent: '20',
     specialOffer: '',
     validFrom: '',
     validTo: '',
@@ -113,8 +120,6 @@ export default function DiscountsSection({ onOffersCount }) {
   const isOwnerOrAdmin = user && (user.role === 'OWNER' || user.role === 'ADMIN' || user.role === 'SUPERADMIN');
 
   // ── Load discounts ────────────────────────────────────────────────────────
-  // Owners/Admins load ALL their discounts so they can manage expired/inactive ones.
-  // Regular users load only currently active/valid discounts via public endpoint.
   const loadDiscounts = useCallback(async (currentUser) => {
     try {
       let res;
@@ -162,6 +167,14 @@ export default function DiscountsSection({ onOffersCount }) {
     loadDiscounts(currentUser);
   }, [loadDiscounts]);
 
+  // ── Copy Code to Clipboard ───────────────────────────────────────────────
+  const handleCopyCode = (code, e) => {
+    if (e) e.stopPropagation();
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2500);
+  };
+
   // ── Toggle Active / Inactive ──────────────────────────────────────────────
   const handleToggleActive = async (discount) => {
     if (!user) return;
@@ -176,6 +189,7 @@ export default function DiscountsSection({ onOffersCount }) {
       setDiscounts((prev) =>
         prev.map((d) => d.id === discount.id ? { ...d, isActive: !d.isActive } : d)
       );
+      loadDiscounts(user);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update discount status.');
     } finally {
@@ -189,9 +203,14 @@ export default function DiscountsSection({ onOffersCount }) {
     setDiscountForm({
       title: '',
       description: '',
+      discountCode: '',
+      discountType: 'PERCENTAGE',
+      discountPercent: '20',
+      discountValue: '',
+      maxDiscountAmount: '',
+      minBookingAmount: '',
       farmhouseType: defaultCategory,
       farmhouseId: '',
-      discountPercent: '20',
       specialOffer: '',
       validFrom: '',
       validTo: '',
@@ -206,9 +225,14 @@ export default function DiscountsSection({ onOffersCount }) {
     setDiscountForm({
       title: d.title || '',
       description: d.description || '',
+      discountCode: d.discountCode || '',
+      discountType: d.discountType || 'PERCENTAGE',
+      discountPercent: d.discountPercent != null ? String(d.discountPercent) : '20',
+      discountValue: d.discountValue != null ? String(d.discountValue) : '',
+      maxDiscountAmount: d.maxDiscountAmount != null ? String(d.maxDiscountAmount) : '',
+      minBookingAmount: d.minBookingAmount != null ? String(d.minBookingAmount) : '',
       farmhouseType: d.farmhouseType || 'ALL',
       farmhouseId: d.farmhouseId ? String(d.farmhouseId) : '',
-      discountPercent: d.discountPercent ? String(d.discountPercent) : '20',
       specialOffer: d.specialOffer || '',
       validFrom: d.validFrom || '',
       validTo: d.validTo || '',
@@ -229,11 +253,16 @@ export default function DiscountsSection({ onOffersCount }) {
     }
     try {
       const payload = {
-        title: discountForm.title || `${discountForm.discountPercent}% OFF on ${discountForm.farmhouseType.replace('_', ' ')}`,
+        title: discountForm.title || `${discountForm.discountType === 'FIXED' ? `₹${discountForm.discountValue}` : `${discountForm.discountPercent}%`} OFF on ${discountForm.farmhouseType.replace('_', ' ')}`,
         description: discountForm.description,
+        discountCode: discountForm.discountCode ? discountForm.discountCode.trim().toUpperCase() : null,
+        discountType: discountForm.discountType,
+        discountPercent: parseFloat(discountForm.discountPercent || 0),
+        discountValue: discountForm.discountValue ? parseFloat(discountForm.discountValue) : null,
+        maxDiscountAmount: discountForm.maxDiscountAmount ? parseFloat(discountForm.maxDiscountAmount) : null,
+        minBookingAmount: discountForm.minBookingAmount ? parseFloat(discountForm.minBookingAmount) : null,
         farmhouseType: discountForm.farmhouseType,
         farmhouseId: discountForm.farmhouseId ? parseInt(discountForm.farmhouseId, 10) : null,
-        discountPercent: parseFloat(discountForm.discountPercent),
         specialOffer: discountForm.specialOffer,
         validFrom: discountForm.validFrom || null,
         validTo: discountForm.validTo || null,
@@ -273,11 +302,11 @@ export default function DiscountsSection({ onOffersCount }) {
 
   // ── Compute display data ──────────────────────────────────────────────────
 
-  // PUBLIC view: only active + within date window + positive percent
+  // PUBLIC view: only active + within date window + valid discount value
   const publicActiveOffers = discounts.filter((d) =>
     d &&
     d.isActive !== false &&
-    Number(d.discountPercent) > 0 &&
+    ((d.discountType === 'FIXED' && Number(d.discountValue) > 0) || Number(d.discountPercent) > 0) &&
     !isOfferExpired(d) &&
     !isOfferNotStarted(d)
   );
@@ -295,11 +324,19 @@ export default function DiscountsSection({ onOffersCount }) {
   const displayCards = publicActiveOffers.map((activeDiscount) => {
     const typeKey = activeDiscount.farmhouseType || 'ALL';
     const meta = TYPE_META[typeKey] || TYPE_META.ALL;
-    const discountPercent = Number(activeDiscount.discountPercent);
+    const isFixed = activeDiscount.discountType === 'FIXED';
+    const discountLabel = isFixed ? `₹${activeDiscount.discountValue}` : `${activeDiscount.discountPercent}%`;
+
     return {
       typeKey,
       meta,
-      discountPercent,
+      discountLabel,
+      isFixed,
+      discountPercent: Number(activeDiscount.discountPercent || 0),
+      discountValue: Number(activeDiscount.discountValue || 0),
+      discountCode: activeDiscount.discountCode || null,
+      minBookingAmount: activeDiscount.minBookingAmount || null,
+      maxDiscountAmount: activeDiscount.maxDiscountAmount || null,
       specialOffer: activeDiscount.specialOffer || null,
       validFrom: activeDiscount.validFrom || null,
       validTo: activeDiscount.validTo || null,
@@ -344,7 +381,7 @@ export default function DiscountsSection({ onOffersCount }) {
                 className="ds-create-discount-btn"
                 onClick={() => openCreateModal('POOL_PARTY')}
               >
-                ➕ Set / Change % Discount ({user.role})
+                ➕ Create Discount Offer ({user.role})
               </button>
               <button
                 type="button"
@@ -357,7 +394,7 @@ export default function DiscountsSection({ onOffersCount }) {
           )}
         </div>
         <h2>Special Farmhouse Type Discounts</h2>
-        <p>Explore exclusive percentage discounts currently active for farmhouse stays.</p>
+        <p>Explore exclusive promotional deals and discounts currently active for farmhouse stays.</p>
       </div>
 
       {/* ── OWNER / ADMIN MANAGEMENT TABLE ── */}
@@ -368,11 +405,13 @@ export default function DiscountsSection({ onOffersCount }) {
             <table className="ds-manage-table">
               <thead>
                 <tr>
+                  <th>Code</th>
                   <th>Title</th>
                   <th>Type</th>
-                  <th>%</th>
+                  <th>Value</th>
                   <th>Valid From</th>
                   <th>Valid To</th>
+                  <th>Min Order</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -380,24 +419,37 @@ export default function DiscountsSection({ onOffersCount }) {
               <tbody>
                 {managedDiscounts.map((d) => {
                   const status = getOfferStatus(d);
-                  const statusCfg = STATUS_CONFIG[status];
+                  const statusCfg = STATUS_CONFIG[status] || STATUS_CONFIG.ACTIVE;
                   const meta = TYPE_META[d.farmhouseType] || TYPE_META.ALL;
                   const isToggling = togglingId === d.id;
+                  const isFixed = d.discountType === 'FIXED';
                   return (
                     <tr
                       key={d.id}
                       className={`ds-manage-row${status === 'EXPIRED' ? ' expired-row' : status === 'INACTIVE' ? ' inactive-row' : ''}`}
                     >
+                      <td>
+                        {d.discountCode ? (
+                          <code className="ds-table-code">{d.discountCode}</code>
+                        ) : (
+                          <span className="ds-null-cell">—</span>
+                        )}
+                      </td>
                       <td className="ds-col-title">
                         <span className="ds-col-emoji">{meta.emoji}</span>
                         <span>{d.title}</span>
                       </td>
                       <td><span className="ds-type-chip">{meta.label}</span></td>
-                      <td><strong>{d.discountPercent}%</strong></td>
-                      <td>{formatDiscountDate(d.validFrom) || <span className="ds-null-cell">—</span>}</td>
+                      <td>
+                        <strong>{isFixed ? `₹${d.discountValue}` : `${d.discountPercent}%`}</strong>
+                      </td>
+                      <td>{formatDiscountDate(d.validFrom) || <span className="ds-null-cell">Immediate</span>}</td>
                       <td>
                         {formatDiscountDate(d.validTo) || <span className="ds-null-cell">Ongoing</span>}
                         {status === 'EXPIRED' && <span className="ds-expired-tag"> Ended</span>}
+                      </td>
+                      <td>
+                        {d.minBookingAmount ? `₹${d.minBookingAmount}` : <span className="ds-null-cell">None</span>}
                       </td>
                       <td>
                         <span
@@ -446,7 +498,7 @@ export default function DiscountsSection({ onOffersCount }) {
           </div>
           <p className="ds-manage-hint">
             💡 Only <strong>Active</strong> offers within their validity dates are visible to guests.
-            Expired offers are automatically hidden from users.
+            Expired or inactive offers are automatically hidden from users.
           </p>
         </div>
       )}
@@ -454,7 +506,7 @@ export default function DiscountsSection({ onOffersCount }) {
       {/* Label for guest view when admin/owner is logged in */}
       {isOwnerOrAdmin && (
         <h3 className="ds-manage-title" style={{ marginBottom: '1rem', marginTop: '2rem' }}>
-          👥 Guest View (Active Offers)
+          👥 Guest View (Active Offers Only)
         </h3>
       )}
 
@@ -475,7 +527,7 @@ export default function DiscountsSection({ onOffersCount }) {
               style={{ margin: '0 auto', display: 'inline-flex' }}
               onClick={() => openCreateModal('POOL_PARTY')}
             >
-              ➕ Set First % Discount
+              ➕ Create First Discount
             </button>
           )}
         </div>
@@ -487,9 +539,9 @@ export default function DiscountsSection({ onOffersCount }) {
               className={`ds-type-card ${card.meta.themeClass || ''}`}
               style={{ background: card.meta.gradient }}
             >
-              {/* Percentage Badge */}
+              {/* Percentage / Fixed Discount Badge */}
               <div className="ds-badge">
-                <span className="ds-badge-percent">{card.discountPercent}%</span>
+                <span className="ds-badge-percent">{card.discountLabel}</span>
                 <span className="ds-badge-off">OFF</span>
               </div>
 
@@ -499,10 +551,10 @@ export default function DiscountsSection({ onOffersCount }) {
                   <button
                     type="button"
                     className="ds-mini-btn edit"
-                    title="Edit % Discount"
+                    title="Edit Discount"
                     onClick={() => openEditModal(card.rawDiscount)}
                   >
-                    ✏️ Edit %
+                    ✏️ Edit
                   </button>
                   <button
                     type="button"
@@ -524,6 +576,21 @@ export default function DiscountsSection({ onOffersCount }) {
                 </div>
               </div>
 
+              {/* Coupon Code Pill */}
+              {card.discountCode && (
+                <div className="ds-code-box">
+                  <span className="ds-code-label">PROMO CODE:</span>
+                  <code className="ds-code-val">{card.discountCode}</code>
+                  <button
+                    type="button"
+                    className={`ds-copy-btn ${copiedCode === card.discountCode ? 'copied' : ''}`}
+                    onClick={(e) => handleCopyCode(card.discountCode, e)}
+                  >
+                    {copiedCode === card.discountCode ? '✓ Copied' : '📋 Copy'}
+                  </button>
+                </div>
+              )}
+
               {card.farmhouseName && (
                 <div className="ds-specific-farmhouse">
                   🏡 Applies to: <strong>{card.farmhouseName}</strong>
@@ -533,6 +600,12 @@ export default function DiscountsSection({ onOffersCount }) {
               {(card.validFrom || card.validTo) && (
                 <div className="ds-validity-tag">
                   📅 Valid: {formatDiscountDate(card.validFrom) || 'Now'} - {formatDiscountDate(card.validTo) || 'Ongoing'}
+                </div>
+              )}
+
+              {card.minBookingAmount && (
+                <div className="ds-min-order-tag">
+                  💳 Min. booking: ₹{card.minBookingAmount}
                 </div>
               )}
 
@@ -554,7 +627,7 @@ export default function DiscountsSection({ onOffersCount }) {
                   state={{ appliedDiscount: card.rawDiscount }}
                   className="ds-type-book-btn"
                 >
-                  Explore {card.meta.label} ({card.discountPercent}% OFF) →
+                  Explore {card.meta.label} ({card.discountLabel} OFF) →
                 </Link>
               </div>
             </div>
@@ -568,7 +641,7 @@ export default function DiscountsSection({ onOffersCount }) {
           <div className="ds-modal-content">
             <div className="ds-modal-header">
               <h3>
-                {editingDiscount ? '✏️ Edit Farmhouse Type Discount' : '➕ Set % Discount for Farmhouse Type'}
+                {editingDiscount ? '✏️ Edit Discount Offer' : '➕ Create Discount Offer'}
               </h3>
               <button type="button" className="ds-modal-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
@@ -580,9 +653,77 @@ export default function DiscountsSection({ onOffersCount }) {
                 </div>
               )}
 
+              {/* Title & Code */}
               <div className="ds-form-row">
                 <div className="ds-form-field">
-                  <label>1. Farmhouse Type *</label>
+                  <label>1. Discount Title *</label>
+                  <input
+                    type="text"
+                    value={discountForm.title}
+                    onChange={(e) => setDiscountForm({ ...discountForm, title: e.target.value })}
+                    placeholder="e.g. Summer Pool Fiesta"
+                    required
+                  />
+                </div>
+                <div className="ds-form-field">
+                  <label>2. Coupon Code (Optional)</label>
+                  <input
+                    type="text"
+                    value={discountForm.discountCode}
+                    onChange={(e) => setDiscountForm({ ...discountForm, discountCode: e.target.value.toUpperCase() })}
+                    placeholder="e.g. SAVE20, POOL500"
+                  />
+                </div>
+              </div>
+
+              {/* Type & Discount Value */}
+              <div className="ds-form-row">
+                <div className="ds-form-field">
+                  <label>3. Discount Type *</label>
+                  <select
+                    value={discountForm.discountType}
+                    onChange={(e) => setDiscountForm({ ...discountForm, discountType: e.target.value })}
+                    required
+                  >
+                    <option value="PERCENTAGE">Percentage (% OFF)</option>
+                    <option value="FIXED">Fixed Amount (₹ Flat OFF)</option>
+                  </select>
+                </div>
+
+                <div className="ds-form-field">
+                  <label>
+                    {discountForm.discountType === 'FIXED' ? '4. Flat Amount (₹) *' : '4. Discount % *'}
+                  </label>
+                  {discountForm.discountType === 'FIXED' ? (
+                    <input
+                      type="number"
+                      min="1"
+                      value={discountForm.discountValue}
+                      onChange={(e) => setDiscountForm({ ...discountForm, discountValue: e.target.value })}
+                      placeholder="e.g. 500"
+                      required
+                    />
+                  ) : (
+                    <div className="ds-percent-input-wrap">
+                      <input
+                        type="number"
+                        min="0"
+                        max="90"
+                        value={discountForm.discountPercent}
+                        onChange={(e) => setDiscountForm({ ...discountForm, discountPercent: e.target.value })}
+                        placeholder="0"
+                        required
+                      />
+                      <span className="ds-percent-symbol">% OFF</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Farmhouse Category & Specific Farmhouse */}
+              <div className="ds-form-row">
+                <div className="ds-form-field">
+                  <label>5. Farmhouse Category *</label>
                   <select
                     value={discountForm.farmhouseType}
                     onChange={(e) => setDiscountForm({ ...discountForm, farmhouseType: e.target.value })}
@@ -596,47 +737,52 @@ export default function DiscountsSection({ onOffersCount }) {
                   </select>
                 </div>
 
-                <div className="ds-form-field">
-                  <label>2. Discount % *</label>
-                  <div className="ds-percent-input-wrap">
-                    <input
-                      type="number"
-                      min="0"
-                      max="90"
-                      value={discountForm.discountPercent}
-                      onChange={(e) => setDiscountForm({ ...discountForm, discountPercent: e.target.value })}
-                      placeholder="0"
-                      required
-                    />
-                    <span className="ds-percent-symbol">
-                      {Number(discountForm.discountPercent) === 0 ? 'NO DISC' : '% OFF'}
-                    </span>
-                  </div>
-                  <div className="ds-presets-row">
-                    <button
-                      type="button"
-                      className={`ds-preset-chip ${discountForm.discountPercent === '0' ? 'active zero' : ''}`}
-                      onClick={() => setDiscountForm({ ...discountForm, discountPercent: '0' })}
+                {userFarmhouses.length > 0 && (
+                  <div className="ds-form-field">
+                    <label>Target Farmhouse (Optional)</label>
+                    <select
+                      value={discountForm.farmhouseId}
+                      onChange={(e) => setDiscountForm({ ...discountForm, farmhouseId: e.target.value })}
                     >
-                      🚫 0%
-                    </button>
-                    {['10', '15', '20', '25', '30'].map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        className={`ds-preset-chip ${discountForm.discountPercent === p ? 'active' : ''}`}
-                        onClick={() => setDiscountForm({ ...discountForm, discountPercent: p })}
-                      >
-                        {p}%
-                      </button>
-                    ))}
+                      <option value="">Apply to all in category</option>
+                      {userFarmhouses.map((fh) => (
+                        <option key={fh.id} value={fh.id}>
+                          🏡 {fh.name} ({fh.location})
+                        </option>
+                      ))}
+                    </select>
                   </div>
+                )}
+              </div>
+
+              {/* Min Order & Max Discount */}
+              <div className="ds-form-row">
+                <div className="ds-form-field">
+                  <label>6. Min. Booking Amount (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={discountForm.minBookingAmount}
+                    onChange={(e) => setDiscountForm({ ...discountForm, minBookingAmount: e.target.value })}
+                    placeholder="e.g. 3000 (0 for none)"
+                  />
+                </div>
+                <div className="ds-form-field">
+                  <label>7. Max Discount Cap (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={discountForm.maxDiscountAmount}
+                    onChange={(e) => setDiscountForm({ ...discountForm, maxDiscountAmount: e.target.value })}
+                    placeholder="e.g. 2000 (0 for none)"
+                  />
                 </div>
               </div>
 
+              {/* Dates */}
               <div className="ds-form-row">
                 <div className="ds-form-field">
-                  <label>3. Valid From Date (Optional)</label>
+                  <label>8. Start Date (Valid From)</label>
                   <input
                     type="date"
                     value={discountForm.validFrom || ''}
@@ -644,7 +790,7 @@ export default function DiscountsSection({ onOffersCount }) {
                   />
                 </div>
                 <div className="ds-form-field">
-                  <label>4. Valid To Date (Optional)</label>
+                  <label>9. End Date (Valid To)</label>
                   <input
                     type="date"
                     value={discountForm.validTo || ''}
@@ -656,32 +802,15 @@ export default function DiscountsSection({ onOffersCount }) {
 
               {/* Active/Inactive toggle inside modal */}
               <div className="ds-form-field ds-active-toggle-field">
-                <label>5. Offer Status</label>
+                <label>10. Offer Status</label>
                 <button
                   type="button"
                   className={`ds-status-toggle-btn${discountForm.isActive ? ' on' : ''}`}
                   onClick={() => setDiscountForm({ ...discountForm, isActive: !discountForm.isActive })}
                 >
-                  {discountForm.isActive ? '🟢 Active — Visible to guests' : '⏸ Inactive — Hidden from guests'}
+                  {discountForm.isActive ? '🟢 Active — Visible to guests during valid dates' : '⏸ Inactive — Manually disabled'}
                 </button>
               </div>
-
-              {userFarmhouses.length > 0 && (
-                <div className="ds-form-field">
-                  <label>Target Specific Farmhouse (Optional)</label>
-                  <select
-                    value={discountForm.farmhouseId}
-                    onChange={(e) => setDiscountForm({ ...discountForm, farmhouseId: e.target.value })}
-                  >
-                    <option value="">Apply to all farmhouses in this type</option>
-                    {userFarmhouses.map((fh) => (
-                      <option key={fh.id} value={fh.id}>
-                        🏡 {fh.name} ({fh.location})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               <div className="ds-form-field">
                 <label>Special Bonus Offer (Optional)</label>
@@ -689,7 +818,7 @@ export default function DiscountsSection({ onOffersCount }) {
                   type="text"
                   value={discountForm.specialOffer}
                   onChange={(e) => setDiscountForm({ ...discountForm, specialOffer: e.target.value })}
-                  placeholder={Number(discountForm.discountPercent) === 0 ? 'e.g. Standard rate booking' : 'e.g. Complimentary breakfast & BBQ kit'}
+                  placeholder="e.g. Complimentary BBQ kit & Breakfast"
                 />
               </div>
 
@@ -698,7 +827,7 @@ export default function DiscountsSection({ onOffersCount }) {
                   Cancel
                 </button>
                 <button type="submit" className="ds-btn-submit" disabled={formSaving}>
-                  {formSaving ? 'Saving...' : editingDiscount ? 'Update % Discount' : 'Publish % Discount'}
+                  {formSaving ? 'Saving...' : editingDiscount ? 'Update Discount' : 'Publish Discount'}
                 </button>
               </div>
             </form>

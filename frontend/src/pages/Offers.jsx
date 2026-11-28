@@ -4,7 +4,10 @@ import { discountAPI } from '../api/axiosInstance';
 import './Offers.css';
 
 const isOfferCurrentlyValid = (discount) => {
-  if (!discount || discount.isActive === false || Number(discount.discountPercent) <= 0) return false;
+  const hasValidValue = discount?.discountType === 'FIXED'
+    ? Number(discount.discountValue) > 0
+    : Number(discount?.discountPercent) > 0;
+  if (!discount || discount.isActive === false || !hasValidValue) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (discount.validFrom && new Date(`${discount.validFrom}T00:00:00`) > today) return false;
@@ -12,18 +15,28 @@ const isOfferCurrentlyValid = (discount) => {
   return true;
 };
 
-const toOfferCard = (discount) => ({
-  ...discount,
-  discount: `${discount.discountPercent}% OFF`,
-  percent: Number(discount.discountPercent),
-  tagline: discount.farmhouseType === 'POOL_PARTY' ? 'Private Pools & Infinity Luxury' : 'Exclusive Farmhouse Savings',
-  description: discount.description || discount.specialOffer || 'Enjoy exclusive savings on your farmhouse booking.',
-  code: discount.code || `DISCOUNT-${discount.id}`,
-  minNights: '1 night minimum',
-  validTill: discount.validTo ? `Until ${discount.validTo}` : 'Ongoing',
-  status: 'ACTIVE NOW',
-  icon: discount.farmhouseType === 'POOL_PARTY' ? '🏊' : '🏡',
-});
+const toOfferCard = (discount) => {
+  const isFixed = discount.discountType === 'FIXED';
+  const discountLabel = isFixed
+    ? `₹${discount.discountValue || 0} OFF`
+    : `${discount.discountPercent}% OFF`;
+  const code = discount.discountCode || discount.code || `DISCOUNT-${discount.id}`;
+
+  return {
+    ...discount,
+    discount: discountLabel,
+    percent: Number(discount.discountPercent || 0),
+    discountValue: Number(discount.discountValue || 0),
+    discountType: discount.discountType || 'PERCENTAGE',
+    tagline: discount.farmhouseType === 'POOL_PARTY' ? 'Private Pools & Infinity Luxury' : 'Exclusive Farmhouse Savings',
+    description: discount.description || discount.specialOffer || 'Enjoy exclusive savings on your farmhouse booking.',
+    code: code,
+    minNights: discount.minBookingAmount ? `Min stay ₹${discount.minBookingAmount}` : '1 night minimum',
+    validTill: discount.validTo ? `Until ${discount.validTo}` : 'Ongoing',
+    status: 'ACTIVE NOW',
+    icon: discount.farmhouseType === 'POOL_PARTY' ? '🏊' : '🏡',
+  };
+};
 
 function Offers() {
   const [copiedCode, setCopiedCode] = useState(null);

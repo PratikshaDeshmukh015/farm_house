@@ -99,14 +99,14 @@ function App() {
           <Route path="/login" element={user ? <Navigate to="/" /> : <Login onLoginSuccess={setUser} />} />
           <Route path="/register" element={user ? <Navigate to="/" /> : <Register onLoginSuccess={setUser} />} />
           
-          {/* Protected Routes */}
+          {/* Booking Routes */}
           <Route 
             path="/booking/:farmhouseId" 
-            element={
-              <ProtectedRoute user={user}>
-                <BookingPage user={user} />
-              </ProtectedRoute>
-            } 
+            element={<BookingPage user={user} />} 
+          />
+          <Route 
+            path="/booking" 
+            element={<BookingPage user={user} />} 
           />
           <Route 
             path="/create-estate" 

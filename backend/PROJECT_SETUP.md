@@ -476,4 +476,19 @@ backend project run cmd
 
 ---
 
+## Google Sign-in Configuration
+
+Create a Google OAuth **Web application** client and add `http://localhost:5173` as an authorized JavaScript origin. Use the same client ID for the frontend and backend; do not add a Google client secret to the React app.
+
+Copy `frontend/.env.example` to `frontend/.env` and set `VITE_GOOGLE_CLIENT_ID` to the client ID. In PowerShell, set `GOOGLE_CLIENT_ID` in the terminal used to start the backend:
+
+```powershell
+$env:GOOGLE_CLIENT_ID = "your-client-id.apps.googleusercontent.com"
+.\mvnw.cmd spring-boot:run
+```
+
+Start Vite after setting the frontend value so it loads the environment variable. Google sign-in verifies the ID token on the backend and creates new Google accounts as verified customers.
+
+---
+
 **Project completed! 🎉**

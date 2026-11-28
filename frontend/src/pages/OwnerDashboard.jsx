@@ -416,6 +416,7 @@ function OwnerDashboard({ user }) {
 
   const [discounts, setDiscounts] = useState([]);
   const [discountLoading, setDiscountLoading] = useState(false);
+  const [discountError, setDiscountError] = useState('');
   const [showDiscountForm, setShowDiscountForm] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState(null);
   const [discountForm, setDiscountForm] = useState({
@@ -458,12 +459,13 @@ function OwnerDashboard({ user }) {
 
   const fetchDiscounts = useCallback(async () => {
     setDiscountLoading(true);
+    setDiscountError('');
     try {
       const res = await discountAPI.getDiscountsByOwner(user.id, user.id);
       if (res.data.success) setDiscounts(res.data.discounts || []);
-      else setDiscounts([]);
-    } catch {
-      setDiscounts([]);
+      else setDiscountError(res.data.message || 'Failed to load discounts.');
+    } catch (err) {
+      setDiscountError(err.response?.data?.message || 'Could not connect to load discounts.');
     } finally {
       setDiscountLoading(false);
     }
@@ -1102,12 +1104,15 @@ function OwnerDashboard({ user }) {
 
               {discountLoading ? (
                 <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--od-muted)' }}><div className="od-spinner" /><p>Loading discounts...</p></div>
+              ) : discountError ? (
+                <div className="od-empty"><div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div><h3>Could not load discounts</h3><p>{discountError}</p><button className="od-btn od-btn-primary" onClick={fetchDiscounts}>Try Again</button></div>
               ) : discounts.length === 0 ? (
                 <div className="od-empty"><div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏷️</div><h3>No discounts yet</h3><p>Create your first discount to attract more guests!</p><button className="od-btn od-btn-primary" onClick={() => openDiscountForm()}>Create Discount</button></div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: '1.25rem', marginTop: '1rem' }}>
                   {discounts.map((d) => {
                     const expired = isDiscountExpired(d);
+                    const isFixed = d.discountType === 'FIXED';
                     const statusLabel = expired ? 'Expired' : d.isActive ? 'Active' : 'Inactive';
                     const statusClass = expired || !d.isActive ? 'od-badge-danger' : 'od-badge-success';
                     return (
@@ -1121,7 +1126,7 @@ function OwnerDashboard({ user }) {
                       </div>
                       <div className="od-card-body">
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                          <span style={{ background: 'linear-gradient(135deg,#7c3aed,#db2777)', color: '#fff', borderRadius: '20px', padding: '0.2rem 0.8rem', fontSize: '0.8rem', fontWeight: 700 }}>{d.discountPercent}% OFF</span>
+                          <span style={{ background: 'linear-gradient(135deg,#7c3aed,#db2777)', color: '#fff', borderRadius: '20px', padding: '0.2rem 0.8rem', fontSize: '0.8rem', fontWeight: 700 }}>{isFixed ? `₹${Number(d.discountValue || 0).toLocaleString()} OFF` : `${d.discountPercent}% OFF`}</span>
                           <span className={`od-badge ${statusClass}`}>{statusLabel}</span>
                           {d.farmhouseName ? <span className="od-badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(96, 165, 250, 0.4)' }}>🏡 {d.farmhouseName}</span> : <span className="od-badge od-badge-muted">{d.farmhouseType?.replace('_', ' ')}</span>}
                         </div>

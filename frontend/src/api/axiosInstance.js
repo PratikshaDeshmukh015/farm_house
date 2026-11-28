@@ -155,4 +155,8 @@ export const discountAPI = {
     axios.delete(`${API_BASE_URL}/discounts/${id}`, {
       headers: { 'requester-id': requesterId },
     }),
+
+  // Validate & Apply discount by code
+  validateDiscount: (data) =>
+    axios.post(`${API_BASE_URL}/discounts/validate`, data),
 };

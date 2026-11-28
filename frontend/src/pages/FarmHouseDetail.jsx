@@ -107,7 +107,10 @@ const PACKING_DATA = {
 };
 
 const isDiscountCurrentlyValid = (discount) => {
-  if (!discount || discount.isActive === false || Number(discount.discountPercent) <= 0) return false;
+  const hasValidValue = discount?.discountType === 'FIXED'
+    ? Number(discount.discountValue) > 0
+    : Number(discount?.discountPercent) > 0;
+  if (!discount || discount.isActive === false || !hasValidValue) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (discount.validFrom && new Date(`${discount.validFrom}T00:00:00`) > today) return false;
@@ -400,8 +403,11 @@ function FarmHouseDetail({ user }) {
 
     const rawSubtotal = baseCost + chefCost + flatCost;
     const discountPercent = appliedDiscount ? Number(appliedDiscount.discountPercent || 0) : 0;
-    const discountAmount = (nights > 0 && discountPercent > 0)
-      ? Math.round((baseCost * discountPercent) / 100)
+    const isFixedDiscount = appliedDiscount?.discountType === 'FIXED';
+    const discountAmount = nights > 0
+      ? isFixedDiscount
+        ? Math.min(baseCost, Number(appliedDiscount.discountValue || 0))
+        : discountPercent > 0 ? Math.round((baseCost * discountPercent) / 100) : 0
       : 0;
 
     const subtotal = Math.max(0, rawSubtotal - discountAmount);
@@ -871,7 +877,7 @@ function FarmHouseDetail({ user }) {
                 )}
                 {appliedDiscount && discountAmount > 0 && (
                   <div className="fd-bill-row" style={{ color: '#16a34a', fontWeight: 700 }}>
-                    <span>🏷️ Offer ({discountPercent}% OFF)</span>
+                    <span>🏷️ Offer ({isFixedDiscount ? `₹${discountAmount.toLocaleString()} OFF` : `${discountPercent}% OFF`})</span>
                     <span>-₹{discountAmount.toLocaleString()}</span>
                   </div>
                 )}
@@ -906,7 +912,7 @@ function FarmHouseDetail({ user }) {
                 textAlign: 'center',
                 margin: '0.5rem 0 1rem'
               }}>
-                🎉 {discountPercent}% OFF Applied — You save ₹{totalSavings.toLocaleString()}!
+                🎉 {isFixedDiscount ? `₹${discountAmount.toLocaleString()} OFF` : `${discountPercent}% OFF`} Applied — You save ₹{totalSavings.toLocaleString()}!
               </div>
             )}
 
